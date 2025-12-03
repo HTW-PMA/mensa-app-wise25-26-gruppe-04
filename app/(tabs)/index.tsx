@@ -1,97 +1,145 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { StyleSheet, ScrollView, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { HTWColors } from '@/constants/theme';
 
 export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
+    <ScrollView style={styles.container}>
+      <ThemedView style={styles.header}>
         <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+          source={require('@/assets/images/logo-horizontal.png')}
+          style={styles.logo}
+          contentFit="contain"
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome! - Mensa App Gruppe 4</ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
+        <ThemedText type="title" style={styles.title}>
+          HTW Mensa App
+        </ThemedText>
+        <ThemedText style={styles.subtitle}>
+          Deine digitale Mensa-Begleitung
         </ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+      <ThemedView style={styles.section}>
+        <ThemedText type="subtitle">🍽️ Features</ThemedText>
+        
+        <View style={styles.featureCard}>
+          <ThemedText style={styles.featureTitle}>Tagesmenü</ThemedText>
+          <ThemedText style={styles.featureText}>
+            Sieh dir das aktuelle Menü mit allen Nährwertangaben und Allergenen an
+          </ThemedText>
+        </View>
+
+        <View style={styles.featureCard}>
+          <ThemedText style={styles.featureTitle}>KI-Assistent</ThemedText>
+          <ThemedText style={styles.featureText}>
+            Erhalte personalisierte Empfehlungen basierend auf deinen Präferenzen
+          </ThemedText>
+        </View>
+
+        <View style={styles.featureCard}>
+          <ThemedText style={styles.featureTitle}>Wartezeiten</ThemedText>
+          <ThemedText style={styles.featureText}>
+            Plane deinen Besuch mit Live-Wartezeiten und Auslastungsinformationen
+          </ThemedText>
+        </View>
+
+        <View style={styles.featureCard}>
+          <ThemedText style={styles.featureTitle}>Nachhaltigkeit</ThemedText>
+          <ThemedText style={styles.featureText}>
+            Transparente Informationen zu Herkunft und CO₂-Bilanz der Gerichte
+          </ThemedText>
+        </View>
+      </ThemedView>
+
+      <ThemedView style={styles.infoSection}>
+        <ThemedText type="subtitle">📍 Standort</ThemedText>
+        <ThemedText style={styles.infoText}>
+          HTW Berlin Mensa{'\n'}
+          Wilhelminenhofstraße 75A{'\n'}
+          12459 Berlin
         </ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+
+      <ThemedView style={styles.infoSection}>
+        <ThemedText type="subtitle">🕐 Öffnungszeiten</ThemedText>
+        <ThemedText style={styles.infoText}>
+          Montag - Freitag: 11:00 - 14:30 Uhr{'\n'}
+          Samstag & Sonntag: Geschlossen
         </ThemedText>
       </ThemedView>
-    </ParallaxScrollView>
+
+      <View style={styles.footer}>
+        <ThemedText style={styles.footerText}>
+          Entwickelt von Gruppe 04 • WiSe 25/26
+        </ThemedText>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
+  header: {
+    padding: 24,
+    alignItems: 'center',
+    backgroundColor: HTWColors.primary,
+    paddingTop: 60,
+  },
+  logo: {
+    width: 200,
+    height: 60,
+    marginBottom: 16,
+  },
+  title: {
+    color: HTWColors.textInverse,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    color: HTWColors.textInverse,
+    fontSize: 16,
+    opacity: 0.9,
+  },
+  section: {
+    padding: 20,
+    gap: 12,
+  },
+  featureCard: {
+    padding: 16,
+    backgroundColor: HTWColors.backgroundGray,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: HTWColors.primary,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  featureText: {
+    fontSize: 14,
+    opacity: 0.7,
+    lineHeight: 20,
+  },
+  infoSection: {
+    padding: 20,
+    gap: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    lineHeight: 22,
+    opacity: 0.8,
+  },
+  footer: {
+    padding: 20,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  footerText: {
+    fontSize: 12,
+    opacity: 0.5,
   },
 });
