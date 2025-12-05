@@ -1,5 +1,5 @@
 // API Configuration
-const OPENAI_API_KEY = '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'; // TODO: Ersetze mit deinem echten Key
+const OPENAI_API_KEY = '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';
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 const MODEL_NAME = 'gpt-4o-mini';
 
@@ -11,7 +11,7 @@ export async function getAiResponse(
     userMessage: string,
     history: { role: 'user' | 'assistant', content: string }[] = []
 ): Promise<string> {
-    if (!OPENAI_API_KEY || OPENAI_API_KEY === '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') {
+    if (!OPENAI_API_KEY || OPENAI_API_KEY.length < 20) {
         return 'Bitte setze deinen OpenAI API-Key in services/ai/aiService.ts';
     }
 
@@ -37,13 +37,13 @@ export async function getAiResponse(
         if (!response.ok) {
             const error = await response.json();
             console.error('OpenAI API Error:', error);
-            
+
             if (response.status === 401) {
                 return 'Fehler: API-Key ungültig. Bitte überprüfe deinen OpenAI API-Key.';
             } else if (response.status === 429) {
                 return 'Zu viele Anfragen. Bitte warte einen Moment.';
             }
-            
+
             return 'Ein Fehler ist aufgetreten. Bitte versuche es später erneut.';
         }
 
@@ -60,7 +60,8 @@ export async function getAiResponse(
  * Handles the conversational interface, maintaining chat history.
  */
 export async function chat(history: { role: 'user' | 'assistant', content: string }[]): Promise<string> {
-    if (!OPENAI_API_KEY || OPENAI_API_KEY === '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') {
+    // FIXED: Removed hardcoded key check
+    if (!OPENAI_API_KEY || OPENAI_API_KEY.length < 20) {
         return 'Bitte setze deinen OpenAI API-Key in services/ai/aiService.ts';
     }
 
@@ -91,13 +92,13 @@ Halte deine Antworten präzise und auf Deutsch.`;
         if (!response.ok) {
             const error = await response.json();
             console.error('OpenAI API Error:', error);
-            
+
             if (response.status === 401) {
                 return 'Fehler: API-Key ungültig.';
             } else if (response.status === 429) {
                 return 'Zu viele Anfragen. Bitte warte einen Moment.';
             }
-            
+
             return 'Ein Fehler ist aufgetreten.';
         }
 
