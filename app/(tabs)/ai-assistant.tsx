@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { aiService } from '../../services/ai/aiService'; // Adjusted import path for app/(tabs)
+import { aiService } from '../../services/ai/aiService';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
@@ -28,14 +28,12 @@ export default function AIAssistantScreen() {
 
         try {
             // Prepare history for the API call (excluding the unique ID)
-            // We send the full history including the new user message
             const historyForApi = [...messages, newMessage].map(msg => ({
                 role: msg.role,
                 content: msg.content,
             }));
 
             // 2. Call the AI service
-            // The aiService.chat function expects the full history including the latest user message
             const aiResponseText = await aiService.chat(historyForApi);
 
             // 3. Add AI response to history
@@ -57,30 +55,28 @@ export default function AIAssistantScreen() {
         </View>
     );
 
-    const ListHeader = () => (
-        <ThemedView style={styles.header}>
-            <ThemedText type="title">KI-Assistent</ThemedText>
-            <ThemedText>Ernährungsberatung & Empfehlungen</ThemedText>
-            <ThemedText style={styles.introText}>
-                Wie kann ich helfen? Fragen Sie nach Empfehlungen, Nährwertinformationen oder Allergenen.
-            </ThemedText>
-        </ThemedView>
-    );
-
     return (
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
+            {/* Header - FIXED: Jetzt oben */}
+            <ThemedView style={styles.header}>
+                <ThemedText type="title">KI-Assistent</ThemedText>
+                <ThemedText>Ernährungsberatung & Empfehlungen</ThemedText>
+                <ThemedText style={styles.introText}>
+                    Wie kann ich helfen? Fragen Sie nach Empfehlungen, Nährwertinformationen oder Allergenen.
+                </ThemedText>
+            </ThemedView>
+
+            {/* Chat Messages - FIXED: Nicht inverted, neueste Nachricht unten */}
             <FlatList
                 data={messages}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id.toString()}
                 style={styles.chatList}
                 contentContainerStyle={styles.chatListContent}
-                ListHeaderComponent={ListHeader}
-                inverted={messages.length > 0} // Invert only if there are messages
             />
 
             {isLoading && (
@@ -90,6 +86,7 @@ export default function AIAssistantScreen() {
                 </View>
             )}
 
+            {/* Input - Bleibt unten */}
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
@@ -114,8 +111,11 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 20,
+        paddingTop: 60, // Extra padding für Status Bar
         gap: 8,
-        backgroundColor: 'transparent', // Use transparent to allow the main background to show
+        backgroundColor: 'transparent',
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
     },
     introText: {
         marginTop: 10,
@@ -128,7 +128,6 @@ const styles = StyleSheet.create({
     },
     chatListContent: {
         paddingVertical: 10,
-        justifyContent: 'flex-end', // Align content to the bottom
     },
     messageContainer: {
         maxWidth: '80%',
