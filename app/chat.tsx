@@ -1,8 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { aiService } from '../../services/ai/aiService'; // Adjusted import path for app/(tabs)
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { aiService } from '../services/ai/aiService'; // Corrected import path based on the new structure
 
 // Define the message structure
 interface Message {
@@ -11,7 +9,7 @@ interface Message {
     id: number;
 }
 
-export default function AIAssistantScreen() {
+export default function ChatScreen() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -53,58 +51,46 @@ export default function AIAssistantScreen() {
 
     const renderItem = ({ item }: { item: Message }) => (
         <View style={[styles.messageContainer, item.role === 'user' ? styles.userMessage : styles.assistantMessage]}>
-            <Text style={[styles.messageText, item.role === 'user' ? styles.userText : styles.assistantText]}>{item.content}</Text>
+    <Text style={styles.messageText}>{item.content}</Text>
         </View>
-    );
-
-    const ListHeader = () => (
-        <ThemedView style={styles.header}>
-            <ThemedText type="title">KI-Assistent</ThemedText>
-            <ThemedText>Ernährungsberatung & Empfehlungen</ThemedText>
-            <ThemedText style={styles.introText}>
-                Wie kann ich helfen? Fragen Sie nach Empfehlungen, Nährwertinformationen oder Allergenen.
-            </ThemedText>
-        </ThemedView>
-    );
+);
 
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        >
-            <FlatList
-                data={messages}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.id.toString()}
-                style={styles.chatList}
-                contentContainerStyle={styles.chatListContent}
-                ListHeaderComponent={ListHeader}
-                inverted={messages.length > 0} // Invert only if there are messages
-            />
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+    <FlatList
+        data={messages}
+    renderItem={renderItem}
+    keyExtractor={(item) => item.id.toString()}
+    style={styles.chatList}
+    contentContainerStyle={styles.chatListContent}
+    />
 
-            {isLoading && (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color="#007AFF" />
-                    <Text style={styles.loadingText}>Mensa-Bot antwortet...</Text>
-                </View>
-            )}
+    {isLoading && (
+        <View style={styles.loadingContainer}>
+        <ActivityIndicator size="small" color="#007AFF" />
+    <Text style={styles.loadingText}>Mensa-Bot antwortet...</Text>
+    </View>
+    )}
 
-            <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    value={input}
-                    onChangeText={setInput}
-                    placeholder="Frage den Mensa-Bot..."
-                    placeholderTextColor="#999"
-                    onSubmitEditing={handleSend}
-                    returnKeyType="send"
-                    editable={!isLoading}
-                />
-                <Button title="Senden" onPress={handleSend} disabled={isLoading || input.trim() === ''} />
-            </View>
-        </KeyboardAvoidingView>
-    );
+    <View style={styles.inputContainer}>
+    <TextInput
+        style={styles.input}
+    value={input}
+    onChangeText={setInput}
+    placeholder="Frage den Mensa-Bot..."
+    placeholderTextColor="#999"
+    onSubmitEditing={handleSend}
+    returnKeyType="send"
+    editable={!isLoading}
+    />
+    <Button title="Senden" onPress={handleSend} disabled={isLoading || input.trim() === ''} />
+    </View>
+    </KeyboardAvoidingView>
+);
 }
 
 const styles = StyleSheet.create({
@@ -112,23 +98,12 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f0f0f0',
     },
-    header: {
-        padding: 20,
-        gap: 8,
-        backgroundColor: 'transparent', // Use transparent to allow the main background to show
-    },
-    introText: {
-        marginTop: 10,
-        fontSize: 14,
-        color: '#555',
-    },
     chatList: {
         flex: 1,
         paddingHorizontal: 10,
     },
     chatListContent: {
         paddingVertical: 10,
-        justifyContent: 'flex-end', // Align content to the bottom
     },
     messageContainer: {
         maxWidth: '80%',
@@ -147,12 +122,6 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 5,
     },
     messageText: {
-        fontSize: 16,
-    },
-    userText: {
-        color: '#fff',
-    },
-    assistantText: {
         color: '#000',
     },
     inputContainer: {
