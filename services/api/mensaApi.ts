@@ -5,7 +5,8 @@
 
 import { Menu, Dish } from '@/models';
 
-const API_BASE_URL = 'https://api.htw-mensa.de'; // TODO: Replace with actual API URL
+const API_BASE_URL = 'https://mensa.gregorflachs.de/lylDptJVKMnASYr0Equ4Wk3lAtHdSmKBcuVHRL5h3Czlj6/BllEEo58Imkbj5M3f+wJwbnkLTMEEM/UHsRlPUSfCMfaf8Bi0zGYzuIAWbGnUtJNFs3f9j1LvJzJy6x+bNuvMqi5h632L2MdJ81NXnfnb1gI12bKtKxLqFTNAHmHLiEx72uh0uATs0xyrewHOujMv9JFIqfdjFIi3YCT0+6zMmkS6pedLvilyMJLy9f/BCMd2Ow7+3rEMbXjuLMJ6lXGofPbt3S1KILzZ7XrxVCxNpye9WSCj1KQdjceLyjX1CPqbXhiexhoTo3lcgQsCTy9S11G5NuAvgtrSMYx4hg==\n' +
+    '\n'; // TODO: Replace with actual API URL
 
 export class MensaApiService {
   /**
