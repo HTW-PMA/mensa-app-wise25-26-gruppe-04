@@ -11,13 +11,14 @@
 
 import { Menu, Dish, DishCategory, DishLabel } from '@/models';
 import { API_CONFIG } from '@/config/api.config';
+import Constants from 'expo-constants';
 
 const API_BASE_URL = API_CONFIG.MENSA_API.BASE_URL;
 const API_KEY = API_CONFIG.MENSA_API.API_KEY;
 
 // Optional: ID der gewünschten Mensa (z.B. "Mensa HTW Treskowallee")
 const CANTEEN_ID =
-    process.env.EXPO_PUBLIC_MENSA_CANTEEN_ID || ''; // im .env setzen!
+    Constants.expoConfig?.extra?.EXPO_PUBLIC_MENSA_CANTEEN_ID || ''; // im .env setzen!
 
 // --- Typen für die Mensa-API (vereinfacht) -------------------------
 

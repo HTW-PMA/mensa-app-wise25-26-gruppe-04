@@ -1,15 +1,17 @@
 import { Image } from 'expo-image';
 import { StyleSheet, ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { HTWColors } from '@/constants/theme';
 
 export default function HomeScreen() {
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.container}>
       <ThemedView style={styles.header}>
         <Image
-          source={require('@/assets/images/logo-horizontal.png')}
+          source={require('@/assets/images/app-icon.png')}
           style={styles.logo}
           contentFit="contain"
         />
@@ -75,11 +77,15 @@ export default function HomeScreen() {
           Entwickelt von Gruppe 04 • WiSe 25/26
         </ThemedText>
       </View>
-    </ScrollView>
-  );
+
+      </ScrollView>
+    </SafeAreaView>);
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
@@ -87,12 +93,13 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     backgroundColor: HTWColors.primary,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   logo: {
-    width: 200,
-    height: 60,
+    width: 80,
+    height: 80,
     marginBottom: 16,
+    borderRadius: 16,
   },
   title: {
     color: HTWColors.textInverse,

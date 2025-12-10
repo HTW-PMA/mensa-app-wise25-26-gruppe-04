@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { aiService } from '../../services/ai/aiService';
 import { ThemedText } from '@/components/themed-text';
@@ -56,10 +57,11 @@ export default function AIAssistantScreen() {
     );
 
     return (
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
             {/* Header - FIXED: Jetzt oben */}
             <ThemedView style={styles.header}>
@@ -101,17 +103,22 @@ export default function AIAssistantScreen() {
                 <Button title="Senden" onPress={handleSend} disabled={isLoading || input.trim() === ''} />
             </View>
         </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#f0f0f0',
+    },
     container: {
         flex: 1,
         backgroundColor: '#f0f0f0',
     },
     header: {
         padding: 20,
-        paddingTop: 60, // Extra padding für Status Bar
+        paddingTop: 10,
         gap: 8,
         backgroundColor: 'transparent',
         borderBottomWidth: 1,

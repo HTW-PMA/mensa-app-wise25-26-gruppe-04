@@ -1,4 +1,5 @@
 import { StyleSheet, ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { HTWColors } from '@/constants/theme';
@@ -26,7 +27,8 @@ export default function WaitingTimesScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.container}>
       <ThemedView style={styles.header}>
         <ThemedText type="title">Wartezeiten</ThemedText>
         <ThemedText>Aktuelle Auslastung der Mensa</ThemedText>
@@ -74,16 +76,21 @@ export default function WaitingTimesScreen() {
           • Vorbestellung über die App spart Zeit
         </ThemedText>
       </ThemedView>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
   header: {
     padding: 20,
+    paddingTop: 10,
     gap: 8,
   },
   currentStatus: {

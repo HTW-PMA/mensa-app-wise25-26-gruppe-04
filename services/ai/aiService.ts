@@ -1,6 +1,8 @@
 // API Configuration
-const OPENAI_API_KEY = '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';
-const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+import { API_CONFIG } from '@/config/api.config';
+
+const OPENAI_API_KEY = API_CONFIG.AI_API.API_KEY;
+const OPENAI_ENDPOINT = `${API_CONFIG.AI_API.BASE_URL}/chat/completions`;
 const MODEL_NAME = 'gpt-4o-mini';
 
 /**
