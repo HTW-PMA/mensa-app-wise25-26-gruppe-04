@@ -1,8 +1,6 @@
-// API Configuration
-import { API_CONFIG } from '@/config/api.config';
-
-const OPENAI_API_KEY = API_CONFIG.AI_API.API_KEY;
-const OPENAI_ENDPOINT = `${API_CONFIG.AI_API.BASE_URL}/chat/completions`;
+// API Configuration - HARDCODED (da .env in React Native nicht zuverlässig funktioniert)
+const OPENAI_API_KEY = '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';
+const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 const MODEL_NAME = 'gpt-4o-mini';
 
 /**
@@ -28,151 +26,91 @@ export async function getAiResponse(
                 model: MODEL_NAME,
                 messages: [
                     { role: 'system', content: systemPrompt },
-                    ...history,
+                    ...history.map((msg) => ({
+                        role: msg.role,
+                        content: msg.content,
+                    })),
                     { role: 'user', content: userMessage },
                 ],
                 temperature: 0.7,
-                max_tokens: 500,
+                max_tokens: 1000,
             }),
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            console.error('OpenAI API Error:', error);
-
-            if (response.status === 401) {
-                return 'Fehler: API-Key ungültig. Bitte überprüfe deinen OpenAI API-Key.';
-            } else if (response.status === 429) {
-                return 'Zu viele Anfragen. Bitte warte einen Moment.';
-            }
-
-            return 'Ein Fehler ist aufgetreten. Bitte versuche es später erneut.';
+            const errorText = await response.text();
+            console.error('[AI Service] API Error:', errorText);
+            return `Fehler: API-Anfrage fehlgeschlagen (${response.status}). ${errorText}`;
         }
 
         const data = await response.json();
-        const content = data.choices[0]?.message?.content;
-        return content || 'Keine Antwort vom AI-Service.';
+
+        if (data.choices && data.choices.length > 0) {
+            return data.choices[0].message.content;
+        }
+
+        return 'Keine Antwort von der KI erhalten.';
     } catch (error) {
-        console.error('Error calling OpenAI API:', error);
-        return 'Ein Fehler ist bei der Kommunikation mit dem AI-Service aufgetreten.';
+        console.error('[AI Service] Error:', error);
+        return `Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
     }
 }
 
 /**
- * Handles the conversational interface, maintaining chat history.
+ * Get meal recommendations based on user preferences
  */
-export async function chat(history: { role: 'user' | 'assistant', content: string }[]): Promise<string> {
-    // FIXED: Removed hardcoded key check
-    if (!OPENAI_API_KEY || OPENAI_API_KEY.length < 20) {
-        return 'Bitte setze deinen OpenAI API-Key in services/ai/aiService.ts';
-    }
+export async function getMealRecommendation(
+    userPreferences: string,
+    availableMeals: string[]
+): Promise<string> {
+    const systemPrompt = `Du bist ein hilfreicher Ernährungsberater für die HTW Berlin Mensa. 
+Gib personalisierte Empfehlungen basierend auf den Präferenzen des Nutzers.
+Antworte auf Deutsch, freundlich und präzise.`;
 
-    const systemPrompt = `Du bist ein freundlicher und hilfsbereiter KI-Assistent für eine Universitäts-Mensa-App. Dein Name ist Mensa-Bot.
-Deine Hauptaufgabe ist es, Fragen zu verfügbaren Gerichten, Zutaten, Nährwerten und allgemeiner Ernährungsberatung zu beantworten.
-Halte deine Antworten präzise und auf Deutsch.`;
+    const userMessage = `Meine Präferenzen: ${userPreferences}
+Verfügbare Gerichte heute: ${availableMeals.join(', ')}
 
-    const messages = [
-        { role: 'system', content: systemPrompt },
-        ...history,
-    ];
-
-    try {
-        const response = await fetch(OPENAI_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: MODEL_NAME,
-                messages: messages,
-                temperature: 0.8,
-                max_tokens: 500,
-            }),
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            console.error('OpenAI API Error:', error);
-
-            if (response.status === 401) {
-                return 'Fehler: API-Key ungültig.';
-            } else if (response.status === 429) {
-                return 'Zu viele Anfragen. Bitte warte einen Moment.';
-            }
-
-            return 'Ein Fehler ist aufgetreten.';
-        }
-
-        const data = await response.json();
-        const content = data.choices[0]?.message?.content;
-        return content || 'Keine Antwort vom AI-Service.';
-    } catch (error) {
-        console.error('Error calling OpenAI API:', error);
-        return 'Ein Fehler ist bei der Kommunikation mit dem AI-Service aufgetreten.';
-    }
-}
-
-/**
- * Generates a detailed nutritional analysis and health rating for a given dish.
- */
-export async function analyzeNutrition(dish: Dish): Promise<string> {
-    const systemPrompt = `Du bist ein Ernährungsexperte und KI-Assistent für eine Universitäts-Mensa-App. 
-Deine Aufgabe ist es, eine detaillierte Nährwertanalyse und Gesundheitsbewertung für ein Gericht zu erstellen.
-Die Analyse sollte auf dem Namen und den Zutaten des Gerichts basieren.
-Die Ausgabe MUSS eine strukturierte, detaillierte Analyse auf Deutsch sein, einschließlich:
-1. Geschätzte Nährwerte (Kalorien, Protein, Fett, Kohlenhydrate).
-2. Eine kurze Gesundheitsbewertung (z.B. 'ausgewogen', 'hoher Fettgehalt').
-3. Eine abschließende Gesundheitsbewertung von 1 (schlecht) bis 5 (ausgezeichnet).
-
-Gericht-Details: ${JSON.stringify(dish)}`;
-
-    const userMessage = `Bitte erstelle eine detaillierte Nährwertanalyse und Gesundheitsbewertung für das Gericht: ${dish.name}.`;
+Was empfiehlst du mir?`;
 
     return getAiResponse(systemPrompt, userMessage);
 }
 
 /**
- * Generates personalized dish recommendations based on user preferences and available dishes.
+ * Get nutritional information about a meal
  */
-export async function personalizedRecommendation(dishes: Dish[], preferences: UserPreferences): Promise<string> {
-    const systemPrompt = `Du bist ein KI-Assistent für eine Universitäts-Mensa-App. 
-Deine Aufgabe ist es, eine personalisierte Gerichtsempfehlung zu geben.
-Analysiere die Präferenzen des Nutzers und die Liste der verfügbaren Gerichte.
-Die Ausgabe MUSS eine kurze, freundliche und überzeugende Empfehlung auf Deutsch sein, die erklärt, warum das Gericht gut passt.
-Keine Einleitung oder Schlussformel, nur der Empfehlungstext.
+export async function getNutritionalInfo(mealName: string): Promise<string> {
+    const systemPrompt = `Du bist ein Ernährungsexperte. Gib detaillierte Informationen über Nährwerte, 
+Allergene und gesundheitliche Aspekte von Gerichten. Antworte auf Deutsch.`;
 
-Nutzerpräferenzen: ${JSON.stringify(preferences)}
-Verfügbare Gerichte: ${JSON.stringify(dishes)}`;
-
-    const userMessage = "Bitte empfehle mir das beste Gericht für heute basierend auf meinen Präferenzen und dem verfügbaren Menü.";
+    const userMessage = `Gib mir Informationen über: ${mealName}`;
 
     return getAiResponse(systemPrompt, userMessage);
 }
 
-// Data structures
-export interface Dish {
-    id: string;
-    name: string;
-    ingredients: string[];
-    allergens: string[];
-    price: number;
-    category: string;
+/**
+ * Answer general questions about the mensa
+ */
+export async function answerMensaQuestion(
+    question: string,
+    history: { role: 'user' | 'assistant', content: string }[] = []
+): Promise<string> {
+    const systemPrompt = `Du bist der KI-Assistent der HTW Berlin Mensa-App. 
+Beantworte Fragen über:
+- Öffnungszeiten (Mo-Fr 11:00-14:30, Sa-So geschlossen)
+- Menüs und Gerichte
+- Ernährungsberatung
+- Allergene und Nährwerte
+- Nachhaltigkeit der Gerichte
+
+Antworte freundlich, präzise und auf Deutsch.`;
+
+    return getAiResponse(systemPrompt, question, history);
 }
 
-export interface UserPreferences {
-    dietaryRestrictions: string[];
-    favoriteIngredients: string[];
-    dislikedIngredients: string[];
-    maxPrice: number;
-}
-
-// Main AI service object - WICHTIG: Muss exportiert werden!
-export const AIService = {
-    personalizedRecommendation,
-    analyzeNutrition,
-    chat,
+// Export default object for backwards compatibility
+export default {
+    getAiResponse,
+    getMealRecommendation,
+    getNutritionalInfo,
+    answerMensaQuestion,
 };
-
-// Default export für Kompatibilität
-export const aiService = AIService;
