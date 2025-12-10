@@ -10,15 +10,11 @@
  */
 
 import { Menu, Dish, DishCategory, DishLabel } from '@/models';
-import { API_CONFIG } from '@/config/api.config';
-import Constants from 'expo-constants';
 
-const API_BASE_URL = API_CONFIG.MENSA_API.BASE_URL;
-const API_KEY = API_CONFIG.MENSA_API.API_KEY;
-
-// Optional: ID der gewünschten Mensa (z.B. "Mensa HTW Treskowallee")
-const CANTEEN_ID =
-    Constants.expoConfig?.extra?.EXPO_PUBLIC_MENSA_CANTEEN_ID || ''; // im .env setzen!
+// HARDCODED API Config (da .env in React Native nicht zuverlässig funktioniert)
+const API_BASE_URL = 'https://mensa.gregorflachs.de/api/v1';
+const API_KEY = 'lylDptJVKMnASYr0Equ4Wk3lAtHdSmKBcuVHRL5h3Czlj6/BllEEo58Imkbj5M3f+wJwbnkLTMEEM/UHsRlPUSfCMfaf8Bi0zGYzuIAWbGnUtJNFs3f9j1LvJzJy6x+bNuvMqi5h632L2MdJ81NXnfnb1gI12bKtKxLqFTNAHmHLiEx72uh0uATs0xyrewHOujMv9JFIqfdjFIi3YCT0+6zMmkS6pedLvilyMJLy9f/BCMd2Ow7+3rEMbXjuLMJ6lXGofPbt3S1KILzZ7XrxVCxNpye9WSCj1KQdjceLyjX1CPqbXhiexhoTo3lcgQsCTy9S11G5NuAvgtrSMYx4hg==';
+const CANTEEN_ID = '5f6b9c6c7c8a9e0017a5f3b7';
 
 // --- Typen für die Mensa-API (vereinfacht) -------------------------
 
@@ -58,7 +54,7 @@ export class MensaApiService {
     private static buildHeaders() {
         if (!API_KEY) {
             console.warn(
-                '[MensaApiService] Kein Mensa API Key (EXPO_PUBLIC_MENSA_API_KEY) konfiguriert.'
+                '[MensaApiService] Kein Mensa API Key konfiguriert.'
             );
         }
 
@@ -175,7 +171,7 @@ export class MensaApiService {
 
         if (!CANTEEN_ID) {
             console.warn(
-                '[MensaApiService] Keine Mensa-ID (EXPO_PUBLIC_MENSA_CANTEEN_ID) gesetzt – nehme erstes Ergebnis aus /menue.'
+                '[MensaApiService] Keine Mensa-ID gesetzt – nehme erstes Ergebnis aus /menue.'
             );
         }
 
