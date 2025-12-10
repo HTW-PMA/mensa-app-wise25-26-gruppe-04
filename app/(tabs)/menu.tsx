@@ -1,6 +1,7 @@
 import { StyleSheet, ScrollView } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { DailyMenu } from '@/components/daily-menu';
 
 export default function MenuScreen() {
   return (
@@ -9,11 +10,9 @@ export default function MenuScreen() {
         <ThemedText type="title">Menüplan</ThemedText>
         <ThemedText>HTW Berlin Mensa</ThemedText>
       </ThemedView>
-      
+
       <ThemedView style={styles.content}>
-        <ThemedText type="subtitle">Heute</ThemedText>
-        {/* TODO: Implement daily menu display */}
-        <ThemedText>Menüdaten werden hier angezeigt</ThemedText>
+        <DailyMenu date={new Date()} />
       </ThemedView>
     </ScrollView>
   );
@@ -24,11 +23,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 0,
     gap: 8,
   },
   content: {
-    padding: 20,
-    gap: 12,
+    flex: 1,
+    // The DailyMenu component has its own padding
   },
 });

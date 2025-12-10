@@ -3,11 +3,15 @@
  */
 
 export const API_CONFIG = {
-  MENSA_API: {
-    BASE_URL: process.env.EXPO_PUBLIC_MENSA_API_URL || 'https://api.htw-mensa.de',
-    TIMEOUT: 10000, // 10 seconds
-    RETRY_ATTEMPTS: 3,
-  },
+    MENSA_API: {
+        // <-- NEU: Standard-Basis-URL aus der mensa.gregorflachs.de API
+        BASE_URL:
+            process.env.EXPO_PUBLIC_MENSA_API_URL ||
+            'https://mensa.gregorflachs.de/api/v1',
+        TIMEOUT: 10000, // 10 seconds
+        API_KEY: process.env.EXPO_PUBLIC_MENSA_API_KEY || '',
+        RETRY_ATTEMPTS: 3,
+    },
   
   AI_API: {
     BASE_URL: 'https://api.openai.com/v1',
