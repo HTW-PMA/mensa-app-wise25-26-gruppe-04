@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { aiService } from '../../services/ai/aiService';
+import { answerMensaQuestion } from '../../services/ai/aiService';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
@@ -35,7 +35,7 @@ export default function AIAssistantScreen() {
             }));
 
             // 2. Call the AI service
-            const aiResponseText = await aiService.chat(historyForApi);
+            const aiResponseText = await answerMensaQuestion(input.trim(), historyForApi);
 
             // 3. Add AI response to history
             const aiMessage: Message = { role: 'assistant', content: aiResponseText, id: Date.now() + 1 };
