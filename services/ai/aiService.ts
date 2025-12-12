@@ -1,5 +1,5 @@
 // API Configuration - HARDCODED (da .env in React Native nicht zuverlässig funktioniert)
-const OPENAI_API_KEY = 'sk-proj-3C4DRWhOlQisstqkwJR9bHuCxvRiLKrnQdof6q9xXPeE004R2aarn-ZUHEvVDUUcA-Z_ALFjvYT3BlbkFJy7ZIsrJK6QNrAdTpGZP7pAaoplx-5TC2oMnUekpi5LHGfRdYe6WiNKG-NITop6aQMxFdnwQZgAnpm';
+const OPENAI_API_KEY = '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';
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 const MODEL_NAME = 'gpt-4o-mini';
 
