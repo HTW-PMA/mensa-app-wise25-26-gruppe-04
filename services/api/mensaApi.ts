@@ -10,11 +10,32 @@
  */
 
 import { Menu, Dish, DishCategory, DishLabel } from '@/models';
+import { API_CONFIG } from '@/config/api.config';
 
-// HARDCODED API Config (da .env in React Native nicht zuverlässig funktioniert)
-const API_BASE_URL = 'https://mensa.gregorflachs.de/api/v1';
-const API_KEY = 'lylDptJVKMnASYr0Equ4Wk3lAtHdSmKBcuVHRL5h3Czlj6/BllEEo58Imkbj5M3f+wJwbnkLTMEEM/UHsRlPUSfCMfaf8Bi0zGYzuIAWbGnUtJNFs3f9j1LvJzJy6x+bNuvMqi5h632L2MdJ81NXnfnb1gI12bKtKxLqFTNAHmHLiEx72uh0uATs0xyrewHOujMv9JFIqfdjFIi3YCT0+6zMmkS6pedLvilyMJLy9f/BCMd2Ow7+3rEMbXjuLMJ6lXGofPbt3S1KILzZ7XrxVCxNpye9WSCj1KQdjceLyjX1CPqbXhiexhoTo3lcgQsCTy9S11G5NuAvgtrSMYx4hg==';
-const CANTEEN_ID = '5f6b9c6c7c8a9e0017a5f3b7';
+/**
+ * WICHTIG:
+ * - Die API liefert Datumswerte in UTC.
+ * - Für Filter (startdate/enddate) soll aber der *lokale* Kalendertag (Europe/Berlin)
+ *   übergeben werden, sonst rutscht das Datum je nach Uhrzeit um einen Tag.
+ */
+
+const API_BASE_URL = API_CONFIG.MENSA_API.BASE_URL;
+const API_KEY = API_CONFIG.MENSA_API.API_KEY;
+
+// Optional via .env / app.json extra (EXPO_PUBLIC_MENSA_CANTEEN_ID). Falls leer,
+// wird automatisch versucht eine passende HTW-Mensa zu finden.
+const CONFIGURED_CANTEEN_ID = (API_CONFIG.MENSA_API.CANTEEN_ID || '').trim() || undefined;
+
+// In-Memory Cache für die Canteen-ID (damit /canteen nicht bei jedem Render aufgerufen wird)
+let resolvedCanteenId: string | null = null;
+
+const formatLocalIsoDate = (date: Date): string => {
+    // YYYY-MM-DD im *lokalen* Kalender (nicht UTC)
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
 
 // --- Typen für die Mensa-API (vereinfacht) -------------------------
 
@@ -65,6 +86,59 @@ export class MensaApiService {
         };
     }
 
+    /**
+     * Bestimmt die Mensa (canteenId), die für Menüabfragen verwendet wird.
+     *
+     * Warum?
+     * - Viele Implementierungsfehler entstehen durch eine falsche/alte Canteen-ID.
+     * - Wenn die ID nicht konfiguriert ist, versuchen wir automatisch eine HTW-Mensa zu finden.
+     */
+    private static async getCanteenId(): Promise<string | undefined> {
+        if (CONFIGURED_CANTEEN_ID) return CONFIGURED_CANTEEN_ID;
+        if (resolvedCanteenId) return resolvedCanteenId;
+
+        try {
+            const params = new URLSearchParams({
+                loadingtype: 'lazy',
+                clickandcollect: 'false',
+                // name-Filter reduziert Payload und ist schneller
+                name: 'Mensa HTW',
+            });
+
+            const resp = await fetch(`${API_BASE_URL}/canteen?${params.toString()}`, {
+                method: 'GET',
+                headers: MensaApiService.buildHeaders(),
+            });
+
+            if (!resp.ok) {
+                // Wir wollen Menü-Fetches nicht hart failen, nur weil Auto-Resolve nicht klappt.
+                console.warn(
+                    `[MensaApiService] /canteen Auto-Resolve fehlgeschlagen (${resp.status}). Menüs werden ohne canteenId gefiltert.`
+                );
+                return undefined;
+            }
+
+            const canteens = (await resp.json()) as Array<{ ID?: string; name?: string }>;
+            const best = Array.isArray(canteens)
+                ? canteens.find((c) => (c.name || '').toLowerCase().includes('treskowallee'))
+                  || canteens[0]
+                : undefined;
+
+            const id = (best?.ID || '').trim();
+            if (id) {
+                resolvedCanteenId = id;
+                return id;
+            }
+        } catch (e) {
+            console.warn(
+                '[MensaApiService] /canteen Auto-Resolve Fehler. Menüs werden ohne canteenId gefiltert.',
+                e
+            );
+        }
+
+        return undefined;
+    }
+
     // Kategorie-Mapping von API-Strings -> DishCategory Enum
     private static mapCategory(raw?: string): DishCategory {
         const value = (raw || '').toLowerCase();
@@ -111,16 +185,44 @@ export class MensaApiService {
     private static mapMealToDish(meal: MensaMeal): Dish {
         const prices = meal.prices || [];
 
-        const getPrice = (type: string): number | undefined => {
-            const found = prices.find(
-                (p) => p.priceType.toLowerCase() === type.toLowerCase()
-            );
-            return found?.price;
+        // Helper: Preis normalisieren (String -> number, Cent -> Euro)
+        const normalizePrice = (value: unknown): number | undefined => {
+            if (value === null || value === undefined) return undefined;
+
+            const num =
+                typeof value === 'number'
+                    ? value
+                    : typeof value === 'string'
+                        ? Number(value.replace(',', '.'))
+                        : NaN;
+
+            if (!Number.isFinite(num)) return undefined;
+
+            // Heuristik: Wenn der Wert "zu groß" ist, ist er sehr wahrscheinlich in Cent (z.B. 350 -> 3.50)
+            if (num >= 50) return Math.round(num) / 100;
+
+            return num;
         };
 
-        const student = getPrice('Student') ?? getPrice('Studierende') ?? 0;
-        const employee = getPrice('Angestellte') ?? student;
-        const guest = getPrice('Gäste') ?? employee;
+        // Helper: priceType normalisieren (Umlaute/Leerzeichen)
+        const normalizeType = (t: string) =>
+            t
+                .toLowerCase()
+                .replace(/\s+/g, '')
+                .replace('ä', 'ae')
+                .replace('ö', 'oe')
+                .replace('ü', 'ue')
+                .replace('ß', 'ss');
+
+        const getPrice = (types: string[]): number | undefined => {
+            const wanted = new Set(types.map(normalizeType));
+            const found = prices.find((p) => wanted.has(normalizeType(String(p.priceType ?? ''))));
+            return normalizePrice((found as any)?.price);
+        };
+
+        const student = getPrice(['Student', 'Studierende', 'Studenten']) ?? 0;
+        const employee = getPrice(['Angestellte', 'Mitarbeiter', 'Employee', 'Employees']) ?? student;
+        const guest = getPrice(['Gäste', 'Gaeste', 'Guest', 'Guests']) ?? employee;
 
         return {
             id: meal.ID,
@@ -141,8 +243,35 @@ export class MensaApiService {
         };
     }
 
+    // Sortierreihenfolge für die Anzeige (Suppe -> Salat -> Hauptgericht -> Beilage -> Dessert -> Getränke)
+    private static categoryOrder(cat: DishCategory): number {
+        switch (cat) {
+            case DishCategory.SOUP:
+                return 1;
+            case DishCategory.SALAD:
+                return 2;
+            case DishCategory.MAIN_COURSE:
+                return 3;
+            case DishCategory.SIDE_DISH:
+                return 4;
+            case DishCategory.DESSERT:
+                return 5;
+            case DishCategory.BEVERAGE:
+                return 6;
+            default:
+                return 99;
+        }
+    }
+
+
     private static mapMenuCardToMenu(card: MensaMenuCard): Menu {
-        const dishes = (card.meals || []).map(MensaApiService.mapMealToDish);
+        const dishes = (card.meals || [])
+            .map(MensaApiService.mapMealToDish)
+            .sort((a, b) => {
+                const c = MensaApiService.categoryOrder(a.category) - MensaApiService.categoryOrder(b.category);
+                if (c !== 0) return c;
+                return a.name.localeCompare(b.name, 'de');
+            });
         const date = card.date;
         const id = card.canteenId || card.canteeenId || `mensa-${date}`;
 
@@ -167,13 +296,8 @@ export class MensaApiService {
      *   GET /menue?loadingtype=complete&canteenId=...&startdate=YYYY-MM-DD&enddate=YYYY-MM-DD
      */
     static async getDailyMenu(date: Date): Promise<Menu> {
-        const dateStr = date.toISOString().split('T')[0];
-
-        if (!CANTEEN_ID) {
-            console.warn(
-                '[MensaApiService] Keine Mensa-ID gesetzt – nehme erstes Ergebnis aus /menue.'
-            );
-        }
+        const dateStr = formatLocalIsoDate(date);
+        const canteenId = await MensaApiService.getCanteenId();
 
         const params = new URLSearchParams({
             loadingtype: 'complete',
@@ -181,8 +305,8 @@ export class MensaApiService {
             enddate: dateStr,
         });
 
-        if (CANTEEN_ID) {
-            params.append('canteenId', CANTEEN_ID);
+        if (canteenId) {
+            params.append('canteenId', canteenId);
         }
 
         const response = await fetch(
@@ -220,11 +344,10 @@ export class MensaApiService {
             };
         }
 
-        const card = CANTEEN_ID
-            ? data.find(
-            (c) =>
-                c.canteenId === CANTEEN_ID || c.canteeenId === CANTEEN_ID
-        ) || data[0]
+        const card = canteenId
+            ?
+              data.find((c) => c.canteenId === canteenId || c.canteeenId === canteenId) ||
+              data[0]
             : data[0];
 
         return MensaApiService.mapMenuCardToMenu(card);
@@ -243,8 +366,10 @@ export class MensaApiService {
         const end = new Date(start);
         end.setDate(start.getDate() + 4); // Mo–Fr
 
-        const startStr = start.toISOString().split('T')[0];
-        const endStr = end.toISOString().split('T')[0];
+        const startStr = formatLocalIsoDate(start);
+        const endStr = formatLocalIsoDate(end);
+
+        const canteenId = await MensaApiService.getCanteenId();
 
         const params = new URLSearchParams({
             loadingtype: 'complete',
@@ -252,9 +377,7 @@ export class MensaApiService {
             enddate: endStr,
         });
 
-        if (CANTEEN_ID) {
-            params.append('canteenId', CANTEEN_ID);
-        }
+        if (canteenId) params.append('canteenId', canteenId);
 
         const response = await fetch(
             `${API_BASE_URL}/menue?${params.toString()}`,

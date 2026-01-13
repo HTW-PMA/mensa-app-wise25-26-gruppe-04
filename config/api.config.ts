@@ -14,6 +14,9 @@ export const API_CONFIG = {
             getEnvVar('EXPO_PUBLIC_MENSA_API_URL', 'https://mensa.gregorflachs.de/api/v1'),
         TIMEOUT: 10000, // 10 seconds
         API_KEY: getEnvVar('EXPO_PUBLIC_MENSA_API_KEY', ''),
+        // Optional: Wenn gesetzt, wird genau diese Mensa verwendet.
+        // Wenn leer, versucht der Service automatisch eine passende HTW-Mensa zu finden.
+        CANTEEN_ID: getEnvVar('EXPO_PUBLIC_MENSA_CANTEEN_ID', ''),
         RETRY_ATTEMPTS: 3,
     },
   
@@ -27,13 +30,14 @@ export const API_CONFIG = {
 };
 
 export const ENDPOINTS = {
-  MENU: {
-    DAILY: '/menu/daily',
-    WEEKLY: '/menu/weekly',
-    SEARCH: '/dishes/search',
-  },
-  DISHES: {
-    DETAILS: '/dishes',
-    FAVORITES: '/dishes/favorites',
+  // Hinweis: Die Mensa-API hat die Endpunkte /menue und /meal (nicht /menu oder /dishes)
+  MENSA: {
+    CANTEEN: '/canteen',
+    MENUE: '/menue',
+    MEAL: '/meal',
+    ADDITIVE: '/additive',
+    BADGE: '/badge',
+    MEAL_REVIEW: '/mealreview',
+    CANTEEN_REVIEW: '/canteenreview',
   },
 };
