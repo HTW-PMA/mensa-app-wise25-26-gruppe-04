@@ -12,6 +12,7 @@ interface UserPreferences {
   dietaryRestrictions: string[];
   allergens: string[];
   maxPrice: number;
+  notificationsEnabled: boolean;
 }
 
 const DIETARY_OPTIONS = [
@@ -43,6 +44,7 @@ export default function SettingsScreen() {
     dietaryRestrictions: [],
     allergens: [],
     maxPrice: 10,
+    notificationsEnabled: false,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -91,6 +93,10 @@ export default function SettingsScreen() {
     savePreferences({ ...preferences, allergens: updated });
   };
 
+  const toggleNotifications = () => {
+    savePreferences({ ...preferences, notificationsEnabled: !preferences.notificationsEnabled });
+  };
+
   const resetPreferences = () => {
     Alert.alert(
       'Einstellungen zurücksetzen',
@@ -105,6 +111,7 @@ export default function SettingsScreen() {
               dietaryRestrictions: [],
               allergens: [],
               maxPrice: 10,
+              notificationsEnabled: false,
             };
             savePreferences(defaultPrefs);
           },
@@ -168,6 +175,25 @@ export default function SettingsScreen() {
               />
             </View>
           ))}
+        </ThemedView>
+
+        {/* Push Notifications */}
+        <ThemedView style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Benachrichtigungen
+          </ThemedText>
+          <ThemedText style={styles.sectionDescription}>
+            Erhalte Push-Benachrichtigungen, wenn deine Lieblingsspeisen verfügbar sind
+          </ThemedText>
+          <View style={styles.optionRow}>
+            <ThemedText style={styles.optionLabel}>Push-Benachrichtigungen</ThemedText>
+            <Switch
+              value={preferences.notificationsEnabled}
+              onValueChange={toggleNotifications}
+              trackColor={{ false: '#ccc', true: HTWColors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
         </ThemedView>
 
         {/* Summary */}

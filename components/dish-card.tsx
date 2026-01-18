@@ -1,9 +1,12 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Dish, DishLabel } from '@/models/Dish';
 import { ThemedText } from './themed-text';
 import { HTWColors } from '@/constants/theme';
 import { IconSymbol } from './ui/icon-symbol';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const FAVORITES_STORAGE_KEY = '@mensa_app_favorites';
 
 interface DishCardProps {
   dish: Dish;
@@ -30,6 +33,43 @@ const formatPrice = (price: number) => {
 
 export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
   const { name, description, price, labels, category, available } = dish;
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    checkIfFavorite();
+  }, [dish.id]);
+
+  const checkIfFavorite = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
+      if (stored) {
+        const favorites: Dish[] = JSON.parse(stored);
+        setIsFavorite(favorites.some(fav => fav.id === dish.id));
+      }
+    } catch (error) {
+      console.error('Error checking favorite:', error);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
+      let favorites: Dish[] = stored ? JSON.parse(stored) : [];
+      
+      if (isFavorite) {
+        // Remove from favorites
+        favorites = favorites.filter(fav => fav.id !== dish.id);
+      } else {
+        // Add to favorites
+        favorites.push(dish);
+      }
+      
+      await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
 
   if (!available) {
     return (
@@ -50,9 +90,18 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
         <ThemedText style={styles.name} type="subtitle">
           {name}
         </ThemedText>
-        <View style={styles.priceContainer}>
-          <ThemedText style={styles.priceLabel}>Studierende:</ThemedText>
-          <ThemedText style={styles.priceValue}>{formatPrice(price.student)}</ThemedText>
+        <View style={styles.headerRight}>
+          <View style={styles.priceContainer}>
+            <ThemedText style={styles.priceLabel}>Studierende:</ThemedText>
+            <ThemedText style={styles.priceValue}>{formatPrice(price.student)}</ThemedText>
+          </View>
+          <TouchableOpacity onPress={toggleFavorite} style={styles.favoriteButton}>
+            <IconSymbol 
+              name={isFavorite ? 'heart.fill' : 'heart'} 
+              size={24} 
+              color={isFavorite ? HTWColors.error : HTWColors.textLight} 
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -105,6 +154,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  favoriteButton: {
+    padding: 4,
   },
   name: {
     flex: 1,

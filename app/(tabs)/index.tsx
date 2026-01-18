@@ -1,13 +1,53 @@
 import { Image } from 'expo-image';
-import { StyleSheet, ScrollView, View } from 'react-native';
+import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { HTWColors } from '@/constants/theme';
+import { useRouter } from 'expo-router';
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
+
+const LOCATION_STORAGE_KEY = '@mensa_app_location';
+
+const LOCATIONS = [
+  { id: 'wilhelminenhof', name: 'Campus Wilhelminenhof', address: 'Wilhelminenhofstraße 75A, 12459 Berlin' },
+  { id: 'treskowallee', name: 'Campus Treskowallee', address: 'Treskowallee 8, 10318 Berlin' },
+];
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const [selectedLocation, setSelectedLocation] = useState('wilhelminenhof');
+
+  useEffect(() => {
+    loadLocation();
+  }, []);
+
+  const loadLocation = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(LOCATION_STORAGE_KEY);
+      if (stored) {
+        setSelectedLocation(stored);
+      }
+    } catch (error) {
+      console.error('Error loading location:', error);
+    }
+  };
+
+  const handleLocationChange = async (locationId: string) => {
+    try {
+      await AsyncStorage.setItem(LOCATION_STORAGE_KEY, locationId);
+      setSelectedLocation(locationId);
+    } catch (error) {
+      console.error('Error saving location:', error);
+    }
+  };
+
+  const currentLocation = LOCATIONS.find(loc => loc.id === selectedLocation) || LOCATIONS[0];
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <ScrollView style={styles.container}>
       <ThemedView style={styles.header}>
         <Image
@@ -21,46 +61,59 @@ export default function HomeScreen() {
         <ThemedText style={styles.subtitle}>
           Deine digitale Mensa-Begleitung
         </ThemedText>
+        
+        {/* Standort-Wechsel */}
+        <View style={styles.locationPicker}>
+          <Picker
+            selectedValue={selectedLocation}
+            onValueChange={handleLocationChange}
+            style={styles.picker}
+            dropdownIconColor={HTWColors.textInverse}
+          >
+            {LOCATIONS.map(loc => (
+              <Picker.Item key={loc.id} label={loc.name} value={loc.id} />
+            ))}
+          </Picker>
+        </View>
       </ThemedView>
 
       <ThemedView style={styles.section}>
         <ThemedText type="subtitle">🍽️ Features</ThemedText>
         
-        <View style={styles.featureCard}>
+        <TouchableOpacity style={styles.featureCard} onPress={() => router.push('/(tabs)/menu')}>
           <ThemedText style={styles.featureTitle}>Tagesmenü</ThemedText>
           <ThemedText style={styles.featureText}>
             Sieh dir das aktuelle Menü mit allen Nährwertangaben und Allergenen an
           </ThemedText>
-        </View>
+        </TouchableOpacity>
 
-        <View style={styles.featureCard}>
+        <TouchableOpacity style={styles.featureCard} onPress={() => router.push('/(tabs)/ai-assistant')}>
           <ThemedText style={styles.featureTitle}>KI-Assistent</ThemedText>
           <ThemedText style={styles.featureText}>
             Erhalte personalisierte Empfehlungen basierend auf deinen Präferenzen
           </ThemedText>
-        </View>
+        </TouchableOpacity>
 
-        <View style={styles.featureCard}>
+        <TouchableOpacity style={styles.featureCard} onPress={() => router.push('/(tabs)/waiting-times')}>
           <ThemedText style={styles.featureTitle}>Wartezeiten</ThemedText>
           <ThemedText style={styles.featureText}>
             Plane deinen Besuch mit Live-Wartezeiten und Auslastungsinformationen
           </ThemedText>
-        </View>
+        </TouchableOpacity>
 
-        <View style={styles.featureCard}>
+        <TouchableOpacity style={styles.featureCard} onPress={() => router.push('/(tabs)/menu')}>
           <ThemedText style={styles.featureTitle}>Nachhaltigkeit</ThemedText>
           <ThemedText style={styles.featureText}>
             Transparente Informationen zu Herkunft und CO₂-Bilanz der Gerichte
           </ThemedText>
-        </View>
+        </TouchableOpacity>
       </ThemedView>
 
       <ThemedView style={styles.infoSection}>
         <ThemedText type="subtitle">📍 Standort</ThemedText>
         <ThemedText style={styles.infoText}>
           HTW Berlin Mensa{'\n'}
-          Wilhelminenhofstraße 75A{'\n'}
-          12459 Berlin
+          {currentLocation.address}
         </ThemedText>
       </ThemedView>
 
@@ -93,7 +146,18 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     backgroundColor: HTWColors.primary,
-    paddingTop: 20,
+    paddingTop: 60,
+  },
+  locationPicker: {
+    width: '100%',
+    marginTop: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  picker: {
+    color: HTWColors.textInverse,
+    height: 50,
   },
   logo: {
     width: 80,
