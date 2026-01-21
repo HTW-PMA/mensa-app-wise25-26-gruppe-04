@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { aiService } from '../services/ai/aiService'; // Corrected import path based on the new structure
+import  aiService  from '../services/ai/aiService'; // Corrected import path based on the new structure
 
 // Define the message structure
 interface Message {

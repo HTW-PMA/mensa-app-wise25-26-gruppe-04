@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Menu } from '@/models';
-import { MensaApiService } from '@/services/api/mensaApi';
+import { MensaOfflineService } from '@/services/offline/mensaOfflineService';
 
 export function useMenuData(date?: Date) {
     const [menu, setMenu] = useState<Menu | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<Error | null>(null);
+
+    // optional: UI kann anzeigen “aus Cache”
+    const [source, setSource] = useState<'network' | 'cache' | null>(null);
 
     useEffect(() => {
         const fetchMenu = async () => {
@@ -13,8 +16,9 @@ export function useMenuData(date?: Date) {
                 setLoading(true);
                 setError(null);
 
-                const menuData = await MensaApiService.getDailyMenu(date || new Date());
-                setMenu(menuData);
+                const result = await MensaOfflineService.getDailyMenu(date || new Date());
+                setMenu(result.data);
+                setSource(result.source);
             } catch (err) {
                 setError(err as Error);
             } finally {
@@ -28,8 +32,11 @@ export function useMenuData(date?: Date) {
     const refresh = async () => {
         try {
             setLoading(true);
-            const menuData = await MensaApiService.getDailyMenu(date || new Date());
-            setMenu(menuData);
+            setError(null);
+
+            const result = await MensaOfflineService.refreshDailyMenu(date || new Date());
+            setMenu(result.data);
+            setSource(result.source);
         } catch (err) {
             setError(err as Error);
         } finally {
@@ -37,10 +44,5 @@ export function useMenuData(date?: Date) {
         }
     };
 
-    return {
-        menu,
-        loading,
-        error,
-        refresh,
-    };
+    return { menu, loading, error, refresh, source };
 }
