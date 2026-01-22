@@ -4,64 +4,41 @@
     "slug": "htw-mensa-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "htwmensaapp",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "de.htw-berlin.mensa-app",
-      "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "de.htwberlin.mensa.gruppe04",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       }
     },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#76B900",
-        "foregroundImage": "./assets/images/app-icon.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "package": "de.htwberlin.mensaapp",
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+    "owner": "gruppe-04",
+    "extra": {
+      "eas": {
+        "projectId": "3e9f4af8-8657-4562-8f7a-e85a5cd12397"
+      }
     },
     "plugins": [
-      "expo-router",
+      "expo-web-browser",
       [
-        "expo-notifications",
+        "expo-build-properties",
         {
-          "icon": "./assets/images/icon.png",
-          "color": "#76B900",
-          "sounds": ["./assets/sounds/notification.wav"]
-        }
-      ],
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-screen.png",
-          "imageWidth": 300,
-          "resizeMode": "contain",
-          "backgroundColor": "#76B900",
-          "dark": {
-            "backgroundColor": "#5A8F00"
+          "android": {
+            "kotlinVersion": "2.0.21",
+            "kspVersion": "2.0.21-1.0.25"
           }
         }
-      ]
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    },
-    "extra": {
-      "EXPO_PUBLIC_OPENAI_API_KEY": "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",
-      "EXPO_PUBLIC_MENSA_API_URL": "https://mensa.gregorflachs.de/api/v1",
-      "EXPO_PUBLIC_MENSA_API_KEY": "lylDptJVKMnASYr0Equ4Wk3lAtHdSmKBcuVHRL5h3Czlj6/BllEEo58Imkbj5M3f+wJwbnkLTMEEM/UHsRlPUSfCMfaf8Bi0zGYzuIAWbGnUtJNFs3f9j1LvJzJy6x+bNuvMqi5h632L2MdJ81NXnfnb1gI12bKtKxLqFTNAHmHLiEx72uh0uATs0xyrewHOujMv9JFIqfdjFIi3YCT0+6zMmkS6pedLvilyMJLy9f/BCMd2Ow7+3rEMbXjuLMJ6lXGofPbt3S1KILzZ7XrxVCxNpye9WSCj1KQdjceLyjX1CPqbXhiexhoTo3lcgQsCTy9S11G5NuAvgtrSMYx4hg==",
-      "EXPO_PUBLIC_MENSA_CANTEEN_ID": ""
-    }
+      ],
+      "expo-router"
+    ]
   }
 }
