@@ -1,7 +1,5 @@
 # HTW Berlin Mensa App - Gruppe 04
 
-Eine mobile Anwendung für die Mensa der HTW Berlin mit integrierter KI-Unterstützung.
-
 ## 🎯 Features
 
 ### Kernfunktionen
