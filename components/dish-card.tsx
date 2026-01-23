@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Dish, DishLabel } from '@/models/Dish';
 import { ThemedText } from './themed-text';
-import { HTWColors } from '@/constants/theme';
 import { IconSymbol } from './ui/icon-symbol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const FAVORITES_STORAGE_KEY = '@mensa_app_favorites';
 
@@ -12,28 +13,30 @@ interface DishCardProps {
   dish: Dish;
 }
 
-const getLabelIcon = (label: DishLabel) => {
-  switch (label) {
-    case DishLabel.VEGAN:
-      return { name: 'leaf.fill', color: HTWColors.success };
-    case DishLabel.VEGETARIAN:
-      return { name: 'carrot.fill', color: HTWColors.success };
-    case DishLabel.ORGANIC:
-      return { name: 'o.circle.fill', color: HTWColors.primary };
-    case DishLabel.REGIONAL:
-      return { name: 'map.fill', color: HTWColors.primary };
-    default:
-      return { name: 'tag.fill', color: HTWColors.text };
-  }
-};
-
-const formatPrice = (price: number) => {
-  return (price / 100).toFixed(2).replace('.', ',') + ' €';
-};
-
 export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
   const { name, description, price, labels, category, available } = dish;
   const [isFavorite, setIsFavorite] = useState(false);
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme];
+
+  const getLabelIcon = (label: DishLabel) => {
+    switch (label) {
+      case DishLabel.VEGAN:
+        return { name: 'leaf.fill', color: theme.success };
+      case DishLabel.VEGETARIAN:
+        return { name: 'carrot.fill', color: theme.success };
+      case DishLabel.ORGANIC:
+        return { name: 'o.circle.fill', color: theme.primary };
+      case DishLabel.REGIONAL:
+        return { name: 'map.fill', color: theme.primary };
+      default:
+        return { name: 'tag.fill', color: theme.text };
+    }
+  };
+
+  const formatPrice = (price: number) => {
+    return (price / 100).toFixed(2).replace('.', ',') + ' €';
+  };
 
   useEffect(() => {
     checkIfFavorite();
@@ -55,15 +58,13 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
     try {
       const stored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
       let favorites: Dish[] = stored ? JSON.parse(stored) : [];
-      
+
       if (isFavorite) {
-        // Remove from favorites
         favorites = favorites.filter(fav => fav.id !== dish.id);
       } else {
-        // Add to favorites
         favorites.push(dish);
       }
-      
+
       await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
       setIsFavorite(!isFavorite);
     } catch (error) {
@@ -73,82 +74,83 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
 
   if (!available) {
     return (
-      <View style={[styles.card, styles.unavailableCard]}>
-        <ThemedText style={styles.name} type="subtitle">
-          {name}
-        </ThemedText>
-        <ThemedText style={styles.unavailableText}>
-          {category} - Derzeit nicht verfügbar
-        </ThemedText>
-      </View>
+        <View style={[styles.card, styles.unavailableCard]}>
+          <ThemedText style={styles.name} type="subtitle">
+            {name}
+          </ThemedText>
+          <ThemedText style={styles.unavailableText}>
+            {category} – Derzeit nicht verfügbar
+          </ThemedText>
+        </View>
     );
   }
 
   return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <ThemedText style={styles.name} type="subtitle">
-          {name}
-        </ThemedText>
-        <View style={styles.headerRight}>
-          <View style={styles.priceContainer}>
-            <ThemedText style={styles.priceLabel}>Studierende:</ThemedText>
-            <ThemedText style={styles.priceValue}>{formatPrice(price.student)}</ThemedText>
+      <View style={styles.card}>
+        <View style={styles.header}>
+          <ThemedText style={styles.name} type="subtitle">
+            {name}
+          </ThemedText>
+          <View style={styles.headerRight}>
+            <View style={styles.priceContainer}>
+              <ThemedText style={styles.priceLabel}>Studierende</ThemedText>
+              <ThemedText style={styles.priceValue}>{formatPrice(price.student)}</ThemedText>
+            </View>
+            <TouchableOpacity onPress={toggleFavorite} style={styles.favoriteButton}>
+              <IconSymbol
+                  name={isFavorite ? 'heart.fill' : 'heart'}
+                  size={22}
+                  color={isFavorite ? theme.error : theme.icon}
+              />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={toggleFavorite} style={styles.favoriteButton}>
-            <IconSymbol 
-              name={isFavorite ? 'heart.fill' : 'heart'} 
-              size={24} 
-              color={isFavorite ? HTWColors.error : HTWColors.textLight} 
-            />
-          </TouchableOpacity>
+        </View>
+
+        {description && (
+            <ThemedText style={styles.description}>{description}</ThemedText>
+        )}
+
+        <View style={styles.footer}>
+          <View style={styles.labelsContainer}>
+            {labels?.map((label) => {
+              const { name: iconName, color } = getLabelIcon(label);
+              return (
+                  <View key={label} style={styles.label}>
+                    <IconSymbol name={iconName} size={14} color={color} />
+                    <ThemedText style={[styles.labelText, { color }]}>
+                      {label.replace('_', ' ')}
+                    </ThemedText>
+                  </View>
+              );
+            })}
+          </View>
+          <ThemedText style={styles.categoryText}>
+            {category.replace('_', ' ')}
+          </ThemedText>
         </View>
       </View>
-
-      {description && (
-        <ThemedText style={styles.description}>{description}</ThemedText>
-      )}
-
-      <View style={styles.footer}>
-        <View style={styles.labelsContainer}>
-          {labels?.map((label) => {
-            const { name: iconName, color } = getLabelIcon(label);
-            return (
-              <View key={label} style={styles.label}>
-                <IconSymbol name={iconName} size={14} color={color} />
-                <ThemedText style={[styles.labelText, { color }]}>
-                  {label.replace('_', ' ')}
-                </ThemedText>
-              </View>
-            );
-          })}
-        </View>
-        <ThemedText style={styles.categoryText}>{category.replace('_', ' ')}</ThemedText>
-      </View>
-    </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: HTWColors.backgroundGray,
+    backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 18,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
     gap: 8,
   },
   unavailableCard: {
     opacity: 0.6,
     borderLeftWidth: 4,
-    borderLeftColor: HTWColors.error,
+    borderLeftColor: '#EF4444',
   },
   unavailableText: {
     fontStyle: 'italic',
-    color: HTWColors.textLight,
+    color: '#6B7280',
   },
   header: {
     flexDirection: 'row',
@@ -174,16 +176,16 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 12,
-    color: HTWColors.textLight,
+    color: '#6B7280',
   },
   priceValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: HTWColors.primary,
+    color: '#0A2540',
   },
   description: {
     fontSize: 14,
-    color: HTWColors.textLight,
+    color: '#6B7280',
     lineHeight: 20,
   },
   footer: {
@@ -200,7 +202,7 @@ const styles = StyleSheet.create({
   label: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: HTWColors.background,
+    backgroundColor: '#F2F3F5',
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 3,
@@ -212,7 +214,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: HTWColors.textLight,
+    color: '#6B7280',
     textTransform: 'capitalize',
   },
 });

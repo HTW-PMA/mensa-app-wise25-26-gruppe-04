@@ -3,7 +3,8 @@ import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { HTWColors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,202 +13,168 @@ import { Picker } from '@react-native-picker/picker';
 const LOCATION_STORAGE_KEY = '@mensa_app_location';
 
 const LOCATIONS = [
-  { id: 'wilhelminenhof', name: 'Campus Wilhelminenhof', address: 'Wilhelminenhofstraße 75A, 12459 Berlin' },
-  { id: 'treskowallee', name: 'Campus Treskowallee', address: 'Treskowallee 8, 10318 Berlin' },
+  { id: 'htw', name: 'HTW Berlin – Wilhelminenhof', address: 'Wilhelminenhofstraße 75A, 12459 Berlin' },
+  { id: 'tu', name: 'TU Berlin – Hardenbergstraße', address: 'Hardenbergstraße 34, 10623 Berlin' },
+  { id: 'hu', name: 'HU Berlin – Nord', address: 'Invalidenstraße 42, 10115 Berlin' },
+  { id: 'fu', name: 'FU Berlin – Dahlem', address: 'Königin-Luise-Straße 24, 14195 Berlin' },
+  { id: 'hwr', name: 'HWR Berlin', address: 'Alt-Friedrichsfelde 60, 10315 Berlin' },
+  { id: 'udk', name: 'UdK Berlin', address: 'Einsteinufer 43, 10587 Berlin' },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [selectedLocation, setSelectedLocation] = useState('wilhelminenhof');
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme];
+
+  const [selectedLocation, setSelectedLocation] = useState('htw');
 
   useEffect(() => {
     loadLocation();
   }, []);
 
   const loadLocation = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(LOCATION_STORAGE_KEY);
-      if (stored) {
-        setSelectedLocation(stored);
-      }
-    } catch (error) {
-      console.error('Error loading location:', error);
-    }
+    const stored = await AsyncStorage.getItem(LOCATION_STORAGE_KEY);
+    if (stored) setSelectedLocation(stored);
   };
 
   const handleLocationChange = async (locationId: string) => {
-    try {
-      await AsyncStorage.setItem(LOCATION_STORAGE_KEY, locationId);
-      setSelectedLocation(locationId);
-    } catch (error) {
-      console.error('Error saving location:', error);
-    }
+    await AsyncStorage.setItem(LOCATION_STORAGE_KEY, locationId);
+    setSelectedLocation(locationId);
   };
 
   const currentLocation = LOCATIONS.find(loc => loc.id === selectedLocation) || LOCATIONS[0];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
-      <ScrollView style={styles.container}>
-      <ThemedView style={styles.header}>
-        <Image
-          source={require('@/assets/images/app-icon.png')}
-          style={styles.logo}
-          contentFit="contain"
-        />
-        <ThemedText type="title" style={styles.title}>
-          HTW Mensa App
-        </ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Deine digitale Mensa-Begleitung
-        </ThemedText>
-        
-        {/* Standort-Wechsel */}
-        <View style={styles.locationPicker}>
-          <Picker
-            selectedValue={selectedLocation}
-            onValueChange={handleLocationChange}
-            style={styles.picker}
-            dropdownIconColor={HTWColors.textInverse}
-          >
-            {LOCATIONS.map(loc => (
-              <Picker.Item key={loc.id} label={loc.name} value={loc.id} />
-            ))}
-          </Picker>
-        </View>
-      </ThemedView>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView style={styles.container}>
+          <ThemedView style={[styles.header, { backgroundColor: theme.primary }]}>
+            <Image
+                source={require('@/assets/images/app-icon.png')}
+                style={styles.logo}
+                contentFit="contain"
+            />
+            <ThemedText type="title" style={styles.title}>
+              UniMensa Berlin
+            </ThemedText>
+            <ThemedText style={styles.subtitle}>
+              Alle Mensen der Berliner Hochschulen in einer App
+            </ThemedText>
 
-      <ThemedView style={styles.section}>
-        <ThemedText type="subtitle">🍽️ Features</ThemedText>
-        
-        <TouchableOpacity style={styles.featureCard} onPress={() => router.push('/(tabs)/menu')}>
-          <ThemedText style={styles.featureTitle}>Tagesmenü</ThemedText>
-          <ThemedText style={styles.featureText}>
-            Sieh dir das aktuelle Menü mit allen Nährwertangaben und Allergenen an
-          </ThemedText>
-        </TouchableOpacity>
+            <View style={styles.locationPicker}>
+              <Picker
+                  selectedValue={selectedLocation}
+                  onValueChange={handleLocationChange}
+                  style={styles.picker}
+                  dropdownIconColor="#FFFFFF"
+              >
+                {LOCATIONS.map(loc => (
+                    <Picker.Item key={loc.id} label={loc.name} value={loc.id} />
+                ))}
+              </Picker>
+            </View>
+          </ThemedView>
 
-        <TouchableOpacity style={styles.featureCard} onPress={() => router.push('/(tabs)/ai-assistant')}>
-          <ThemedText style={styles.featureTitle}>KI-Assistent</ThemedText>
-          <ThemedText style={styles.featureText}>
-            Erhalte personalisierte Empfehlungen basierend auf deinen Präferenzen
-          </ThemedText>
-        </TouchableOpacity>
+          <ThemedView style={styles.section}>
+            <ThemedText type="subtitle">🍽️ Funktionen</ThemedText>
 
-        <TouchableOpacity style={styles.featureCard} onPress={() => router.push('/(tabs)/waiting-times')}>
-          <ThemedText style={styles.featureTitle}>Wartezeiten</ThemedText>
-          <ThemedText style={styles.featureText}>
-            Plane deinen Besuch mit Live-Wartezeiten und Auslastungsinformationen
-          </ThemedText>
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/menu')}>
+              <ThemedText style={styles.cardTitle}>Tagesmenü</ThemedText>
+              <ThemedText style={styles.cardText}>Alle Gerichte mit Preisen, Allergenen und Nährwerten</ThemedText>
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.featureCard} onPress={() => router.push('/(tabs)/menu')}>
-          <ThemedText style={styles.featureTitle}>Nachhaltigkeit</ThemedText>
-          <ThemedText style={styles.featureText}>
-            Transparente Informationen zu Herkunft und CO₂-Bilanz der Gerichte
-          </ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
+            <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/ai-assistant')}>
+              <ThemedText style={styles.cardTitle}>KI-Assistent</ThemedText>
+              <ThemedText style={styles.cardText}>Persönliche Empfehlungen nach Vorlieben</ThemedText>
+            </TouchableOpacity>
 
-      <ThemedView style={styles.infoSection}>
-        <ThemedText type="subtitle">📍 Standort</ThemedText>
-        <ThemedText style={styles.infoText}>
-          HTW Berlin Mensa{'\n'}
-          {currentLocation.address}
-        </ThemedText>
-      </ThemedView>
+            <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/waiting-times')}>
+              <ThemedText style={styles.cardTitle}>Wartezeiten</ThemedText>
+              <ThemedText style={styles.cardText}>Live-Auslastung und Stoßzeiten</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
 
-      <ThemedView style={styles.infoSection}>
-        <ThemedText type="subtitle">🕐 Öffnungszeiten</ThemedText>
-        <ThemedText style={styles.infoText}>
-          Montag - Freitag: 11:00 - 14:30 Uhr{'\n'}
-          Samstag & Sonntag: Geschlossen
-        </ThemedText>
-      </ThemedView>
+          <ThemedView style={styles.infoSection}>
+            <ThemedText type="subtitle">📍 Aktueller Standort</ThemedText>
+            <ThemedText style={styles.infoText}>{currentLocation.address}</ThemedText>
+          </ThemedView>
 
-      <View style={styles.footer}>
-        <ThemedText style={styles.footerText}>
-          Entwickelt von Gruppe 04 • WiSe 25/26
-        </ThemedText>
-      </View>
-
-      </ScrollView>
-    </SafeAreaView>);
+          <View style={styles.footer}>
+            <ThemedText style={styles.footerText}>
+              UniMensa Berlin • Gruppe 04 • WiSe 25/26
+            </ThemedText>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+
   header: {
     padding: 24,
     alignItems: 'center',
-    backgroundColor: HTWColors.primary,
     paddingTop: 60,
+  },
+  logo: {
+    width: 88,
+    height: 88,
+    marginBottom: 16,
+    borderRadius: 20,
+  },
+  title: {
+    color: '#FFFFFF',
+    marginBottom: 6,
+  },
+  subtitle: {
+    color: '#FFFFFF',
+    opacity: 0.9,
   },
   locationPicker: {
     width: '100%',
     marginTop: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
     overflow: 'hidden',
   },
   picker: {
-    color: HTWColors.textInverse,
-    height: 50,
+    color: '#FFFFFF',
   },
-  logo: {
-    width: 80,
-    height: 80,
-    marginBottom: 16,
-    borderRadius: 16,
-  },
-  title: {
-    color: HTWColors.textInverse,
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: HTWColors.textInverse,
-    fontSize: 16,
-    opacity: 0.9,
-  },
+
   section: {
     padding: 20,
     gap: 12,
   },
-  featureCard: {
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
     padding: 16,
-    backgroundColor: HTWColors.backgroundGray,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: HTWColors.primary,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  featureTitle: {
+  cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 6,
   },
-  featureText: {
+  cardText: {
     fontSize: 14,
     opacity: 0.7,
-    lineHeight: 20,
   },
+
   infoSection: {
     padding: 20,
-    gap: 12,
   },
   infoText: {
     fontSize: 14,
-    lineHeight: 22,
     opacity: 0.8,
   },
+
   footer: {
     padding: 20,
     alignItems: 'center',
-    marginTop: 20,
   },
   footerText: {
     fontSize: 12,

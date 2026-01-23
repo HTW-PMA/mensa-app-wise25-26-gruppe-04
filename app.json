@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "HTW Mensa App",
-    "slug": "htw-mensa-app",
+    "name": "UniMensa Berlin",
+    "slug": "unimensa-berlin",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/app-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/images/splash-screen.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -15,9 +15,9 @@
       "**/*"
     ],
     "android": {
-      "package": "de.htwberlin.mensa.gruppe04",
+      "package": "de.unimensa.berlin.gruppe04",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundColor": "#ffffff"
       }
     },

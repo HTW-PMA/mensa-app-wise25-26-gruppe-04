@@ -1,124 +1,132 @@
 /**
- * HTW Berlin Theme Configuration
- * Official HTW Berlin Corporate Design Colors
+ * UniMensa Berlin Theme Configuration
+ * Neutral Apple-like Design System
  */
 
 import { Platform } from 'react-native';
 
-// HTW Berlin Official Colors
-export const HTWColors = {
-  // Primary HTW Green
-  primary: '#76B900',      // HTW Grün
-  primaryDark: '#5A8F00',  // Dunkleres Grün
-  primaryLight: '#9DD129', // Helleres Grün
-  
-  // Secondary Colors
-  secondary: '#1A1A1A',    // Schwarz
-  secondaryLight: '#4A4A4A', // Dunkelgrau
-  
-  // Accent Colors
-  accent: '#FFFFFF',       // Weiß
-  accentGray: '#F5F5F5',   // Hellgrau
-  
-  // Semantic Colors
-  success: '#76B900',
-  warning: '#FFA500',
-  error: '#D32F2F',
-  info: '#2196F3',
-  
-  // Text Colors
-  text: '#1A1A1A',
-  textLight: '#666666',
+// UniMensa Berlin Neutral Colors (Apple-like)
+export const UniColors = {
+  primary: '#0A2540',
+  primaryDark: '#081C33',
+  primaryLight: '#3A5A7A',
+
+  secondary: '#111827',
+  secondaryLight: '#6B7280',
+
+  accent: '#FFFFFF',
+  accentGray: '#F2F3F5',
+
+  success: '#22C55E',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+
+  text: '#0F172A',
+  textLight: '#6B7280',
   textInverse: '#FFFFFF',
-  
-  // Background Colors
-  background: '#FFFFFF',
-  backgroundGray: '#F5F5F5',
-  backgroundDark: '#1A1A1A',
-  
-  // Border Colors
-  border: '#E0E0E0',
-  borderLight: '#F0F0F0',
+
+  background: '#F7F8FA',
+  backgroundGray: '#F2F3F5',
+  backgroundCard: '#FFFFFF',
+  backgroundDark: '#0B1220',
+
+  border: '#E5E7EB',
+  shadow: 'rgba(0,0,0,0.08)',
 };
 
-// Updated Colors for Light and Dark Mode
+// Alias für alten Code (damit HTWColors.primary weiter funktioniert)
+export const HTWColors = UniColors;
+
+// Light / Dark Mode
 export const Colors = {
   light: {
-    text: HTWColors.text,
-    background: HTWColors.background,
-    tint: HTWColors.primary,
-    icon: HTWColors.textLight,
-    tabIconDefault: HTWColors.textLight,
-    tabIconSelected: HTWColors.primary,
-    
-    // Additional colors
-    primary: HTWColors.primary,
-    secondary: HTWColors.secondary,
-    surface: HTWColors.backgroundGray,
-    border: HTWColors.border,
-    success: HTWColors.success,
-    warning: HTWColors.warning,
-    error: HTWColors.error,
+    text: UniColors.text,
+    background: UniColors.background,
+    tint: UniColors.primary,
+    icon: UniColors.textLight,
+    tabIconDefault: UniColors.textLight,
+    tabIconSelected: UniColors.primary,
+
+    primary: UniColors.primary,
+    secondary: UniColors.secondary,
+    surface: UniColors.backgroundCard,
+    border: UniColors.border,
+    success: UniColors.success,
+    warning: UniColors.warning,
+    error: UniColors.error,
   },
   dark: {
-    text: HTWColors.textInverse,
-    background: HTWColors.backgroundDark,
-    tint: HTWColors.primary,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: HTWColors.primary,
-    
-    // Additional colors
-    primary: HTWColors.primary,
-    secondary: HTWColors.textInverse,
-    surface: '#2A2A2A',
-    border: '#3A3A3A',
-    success: HTWColors.success,
-    warning: HTWColors.warning,
-    error: HTWColors.error,
+    text: UniColors.textInverse,
+    background: UniColors.backgroundDark,
+    tint: UniColors.primaryLight,
+    icon: '#9CA3AF',
+    tabIconDefault: '#9CA3AF',
+    tabIconSelected: UniColors.primaryLight,
+
+    primary: UniColors.primaryLight,
+    secondary: UniColors.textInverse,
+    surface: '#1F2933',
+    border: '#374151',
+    success: UniColors.success,
+    warning: UniColors.warning,
+    error: UniColors.error,
   },
 };
 
+// Apple-like Fonts
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+    sans: 'SF Pro Display',
+    serif: 'New York',
+    rounded: 'SF Pro Rounded',
+    mono: 'SF Mono',
   },
   default: {
-    sans: 'normal',
+    sans: 'system-ui',
     serif: 'serif',
-    rounded: 'normal',
+    rounded: 'system-ui',
     mono: 'monospace',
   },
   web: {
     sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    rounded: "'SF Pro Rounded', 'Segoe UI', sans-serif",
+    mono: "SFMono-Regular, Menlo, Monaco, Consolas, monospace",
   },
 });
 
 // Spacing
 export const Spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xs: 6,
+  sm: 12,
+  md: 20,
+  lg: 28,
+  xl: 40,
+  xxl: 64,
 };
 
 // Border Radius
 export const BorderRadius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
+  sm: 8,
+  md: 12,
+  lg: 18,
+  xl: 24,
   round: 999,
+};
+
+// Shadow Presets
+export const Shadows = {
+  card: {
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  floating: {
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 6,
+  },
 };
