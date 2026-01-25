@@ -1,106 +1,240 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image } from 'expo-image';
-import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Platform,
+  Animated,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Picker } from '@react-native-picker/picker';
+import { useRouter } from 'expo-router';
 
-const LOCATION_STORAGE_KEY = '@mensa_app_location';
+import { ThemedText } from '@/components/themed-text';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors, UniColors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+
+const LOCATION_STORAGE_KEY = '@mensa_location';
+
+const PROMPTS = [
+  'Was möchtest du heute essen?',
+  'Lust auf etwas Warmes?',
+  'Vegan, Halal oder klassisch?',
+  'Was gibt es heute in der Mensa?',
+  'Heute eher leicht oder deftig?',
+  'Suchst du etwas ohne Allergene?',
+];
 
 const LOCATIONS = [
-  { id: 'htw', name: 'HTW Berlin – Wilhelminenhof', address: 'Wilhelminenhofstraße 75A, 12459 Berlin' },
-  { id: 'tu', name: 'TU Berlin – Hardenbergstraße', address: 'Hardenbergstraße 34, 10623 Berlin' },
-  { id: 'hu', name: 'HU Berlin – Nord', address: 'Invalidenstraße 42, 10115 Berlin' },
-  { id: 'fu', name: 'FU Berlin – Dahlem', address: 'Königin-Luise-Straße 24, 14195 Berlin' },
-  { id: 'hwr', name: 'HWR Berlin', address: 'Alt-Friedrichsfelde 60, 10315 Berlin' },
-  { id: 'udk', name: 'UdK Berlin', address: 'Einsteinufer 43, 10587 Berlin' },
+  { id: 'fu', name: 'Freie Universität Berlin (FU)', address: 'Königin-Luise-Straße 24, 14195 Berlin' },
+  { id: 'hu', name: 'Humboldt-Universität zu Berlin (HU)', address: 'Unter den Linden 6, 10117 Berlin' },
+  { id: 'tu', name: 'Technische Universität Berlin (TU)', address: 'Straße des 17. Juni 135, 10623 Berlin' },
+  { id: 'udk', name: 'Universität der Künste Berlin (UdK)', address: 'Einsteinufer 43, 10587 Berlin' },
+  { id: 'charite', name: 'Charité – Universitätsmedizin Berlin', address: 'Charitéplatz 1, 10117 Berlin' },
+  { id: 'bht', name: 'Berliner Hochschule für Technik (BHT)', address: 'Luxemburger Straße 10, 13353 Berlin' },
+  { id: 'htw', name: 'Hochschule für Technik und Wirtschaft (HTW)', address: 'Wilhelminenhofstraße 75A, 12459 Berlin' },
+  { id: 'hwr', name: 'Hochschule für Wirtschaft und Recht (HWR)', address: 'Alt-Friedrichsfelde 60, 10315 Berlin' },
+  { id: 'ash', name: 'Alice Salomon Hochschule (ASH)', address: 'Alice-Salomon-Platz 5, 12627 Berlin' },
+  { id: 'ehb', name: 'Evangelische Hochschule Berlin (EHB)', address: 'Teltower Damm 118–122, 14167 Berlin' },
+  { id: 'khsb', name: 'Katholische Hochschule für Sozialwesen Berlin (KHSB)', address: 'Köpenicker Allee 39–57, 10318 Berlin' },
 ];
+
+type Filters = {
+  price: boolean;
+  allergens: boolean;
+  vegan: boolean;
+  vegetarian: boolean;
+  halal: boolean;
+};
 
 export default function HomeScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const theme = Colors[colorScheme];
+  const scheme = useColorScheme();
+  const theme = Colors[scheme];
 
-  const [selectedLocation, setSelectedLocation] = useState('htw');
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState('htw');
+  const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<Filters>({
+    price: false,
+    allergens: false,
+    vegan: false,
+    vegetarian: false,
+    halal: false,
+  });
+
+  const [promptIndex, setPromptIndex] = useState(0);
+  const promptOpacity = useRef(new Animated.Value(1)).current;
+  const promptTranslateY = useRef(new Animated.Value(0)).current;
+
+  const selectedLocation = useMemo(
+      () => LOCATIONS.find(l => l.id === selectedLocationId) || LOCATIONS[0],
+      [selectedLocationId]
+  );
 
   useEffect(() => {
-    loadLocation();
+    AsyncStorage.getItem(LOCATION_STORAGE_KEY).then(v => {
+      if (v) setSelectedLocationId(v);
+    });
   }, []);
 
-  const loadLocation = async () => {
-    const stored = await AsyncStorage.getItem(LOCATION_STORAGE_KEY);
-    if (stored) setSelectedLocation(stored);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.parallel([
+        Animated.timing(promptOpacity, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.timing(promptTranslateY, {
+          toValue: -10,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setPromptIndex(i => (i + 1) % PROMPTS.length);
+        promptTranslateY.setValue(10);
+
+        Animated.parallel([
+          Animated.timing(promptOpacity, {
+            toValue: 1,
+            duration: 350,
+            useNativeDriver: true,
+          }),
+          Animated.timing(promptTranslateY, {
+            toValue: 0,
+            duration: 350,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const setLocation = async (id: string) => {
+    setSelectedLocationId(id);
+    setLocationOpen(false);
+    await AsyncStorage.setItem(LOCATION_STORAGE_KEY, id);
   };
 
-  const handleLocationChange = async (locationId: string) => {
-    await AsyncStorage.setItem(LOCATION_STORAGE_KEY, locationId);
-    setSelectedLocation(locationId);
+  const toggleFilter = (key: keyof Filters) => {
+    setFilters(prev => ({ ...prev, [key]: !prev[key] }));
   };
-
-  const currentLocation = LOCATIONS.find(loc => loc.id === selectedLocation) || LOCATIONS[0];
 
   return (
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView style={styles.container}>
-          <ThemedView style={[styles.header, { backgroundColor: theme.primary }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: '#F5F6F8' }]}>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <View style={styles.brand}>
             <Image
-                source={require('@/assets/images/app-icon.png')}
+                source={require('@/assets/images/home-icon.png')}
                 style={styles.logo}
                 contentFit="contain"
             />
-            <ThemedText type="title" style={styles.title}>
-              UniMensa Berlin
-            </ThemedText>
-            <ThemedText style={styles.subtitle}>
-              Alle Mensen der Berliner Hochschulen in einer App
-            </ThemedText>
+            <ThemedText style={styles.brandText}>UniMensa Berlin</ThemedText>
+          </View>
 
-            <View style={styles.locationPicker}>
-              <Picker
-                  selectedValue={selectedLocation}
-                  onValueChange={handleLocationChange}
-                  style={styles.picker}
-                  dropdownIconColor="#FFFFFF"
-              >
+          <TouchableOpacity style={styles.locationBtn} onPress={() => setLocationOpen(!locationOpen)}>
+            <ThemedText style={styles.locationText} numberOfLines={1}>
+              {selectedLocation.name}
+            </ThemedText>
+            <IconSymbol name="chevron.right" size={16} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+
+        {/* DROPDOWN */}
+        {locationOpen && (
+            <View style={styles.dropdown}>
+              <ScrollView style={{ maxHeight: 320 }}>
                 {LOCATIONS.map(loc => (
-                    <Picker.Item key={loc.id} label={loc.name} value={loc.id} />
+                    <TouchableOpacity
+                        key={loc.id}
+                        style={styles.dropdownItem}
+                        onPress={() => setLocation(loc.id)}
+                    >
+                      <ThemedText>{loc.name}</ThemedText>
+                    </TouchableOpacity>
                 ))}
-              </Picker>
+              </ScrollView>
             </View>
-          </ThemedView>
+        )}
 
-          <ThemedView style={styles.section}>
-            <ThemedText type="subtitle">🍽️ Funktionen</ThemedText>
+        <ScrollView contentContainerStyle={styles.content}>
+          {/* Animated Prompt */}
+          <Animated.View
+              style={[
+                styles.promptWrap,
+                { opacity: promptOpacity, transform: [{ translateY: promptTranslateY }] },
+              ]}
+          >
+            <ThemedText style={styles.promptText}>{PROMPTS[promptIndex]}</ThemedText>
+          </Animated.View>
 
-            <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/menu')}>
-              <ThemedText style={styles.cardTitle}>Tagesmenü</ThemedText>
-              <ThemedText style={styles.cardText}>Alle Gerichte mit Preisen, Allergenen und Nährwerten</ThemedText>
-            </TouchableOpacity>
+          {/* Search */}
+          <View style={styles.search}>
+            <IconSymbol name="magnifyingglass" size={16} color="#9CA3AF" />
+            <TextInput
+                placeholder="Gerichte suchen…"
+                value={query}
+                onChangeText={setQuery}
+                style={styles.searchInput}
+                placeholderTextColor="#9CA3AF"
+            />
+          </View>
 
-            <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/ai-assistant')}>
-              <ThemedText style={styles.cardTitle}>KI-Assistent</ThemedText>
-              <ThemedText style={styles.cardText}>Persönliche Empfehlungen nach Vorlieben</ThemedText>
-            </TouchableOpacity>
+          {/* Filter Chips */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 12 }}>
+            {[
+              ['price', 'Preis', 'fork.knife'],
+              ['allergens', 'Allergene', 'exclamationmark.triangle'],
+              ['vegan', 'Vegan', 'leaf.fill'],
+              ['vegetarian', 'Vegetarisch', 'carrot'],
+              ['halal', 'Halal', 'moon.stars'],
+            ].map(([key, label, icon]) => (
+                <TouchableOpacity
+                    key={key}
+                    style={[styles.chip, filters[key as keyof Filters] && styles.chipActive]}
+                    onPress={() => toggleFilter(key as keyof Filters)}
+                >
+                  <IconSymbol
+                      name={icon as any}
+                      size={14}
+                      color={filters[key as keyof Filters] ? UniColors.primary : '#6B7280'}
+                  />
+                  <ThemedText>{label}</ThemedText>
+                </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-            <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/waiting-times')}>
-              <ThemedText style={styles.cardTitle}>Wartezeiten</ThemedText>
-              <ThemedText style={styles.cardText}>Live-Auslastung und Stoßzeiten</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
+          {/* Feature Cards */}
+          {[
+            ['Tagesmenü', 'Alle Gerichte mit Nährwerten und Allergenen', 'fork.knife', () => router.push('/(tabs)/menu')],
+            ['KI-Assistent', 'Personalisierte Empfehlungen', 'sparkles', () => router.push('/(tabs)/ai-assistant')],
+            ['Wartezeiten', 'Live-Auslastung der Mensen', 'clock.fill', () => router.push('/(tabs)/waiting-times')],
+            ['Nachhaltigkeit', 'CO₂-Bilanz und Herkunft', 'leaf.fill', () => router.push('/(tabs)/menu')],
+          ].map(([title, sub, icon, action]) => (
+              <TouchableOpacity key={title as string} style={styles.card} onPress={action as any}>
+                <IconSymbol name={icon as any} size={22} color={UniColors.primary} />
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={styles.cardTitle}>{title}</ThemedText>
+                  <ThemedText style={styles.cardSub}>{sub}</ThemedText>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+          ))}
 
-          <ThemedView style={styles.infoSection}>
-            <ThemedText type="subtitle">📍 Aktueller Standort</ThemedText>
-            <ThemedText style={styles.infoText}>{currentLocation.address}</ThemedText>
-          </ThemedView>
-
-          <View style={styles.footer}>
-            <ThemedText style={styles.footerText}>
-              UniMensa Berlin • Gruppe 04 • WiSe 25/26
+          {/* Footer */}
+          <View style={{ marginTop: 24 }}>
+            <ThemedText style={styles.footerTitle}>Standort</ThemedText>
+            <ThemedText style={styles.footerText}>{selectedLocation.address}</ThemedText>
+            <ThemedText style={styles.footerSmall}>
+              UniMensa Berlin · Gruppe 04 · HTW Berlin · WiSe 25/26
             </ThemedText>
           </View>
         </ScrollView>
@@ -110,74 +244,109 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  container: { flex: 1 },
 
   header: {
-    padding: 24,
+    height: 72,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 60,
-  },
-  logo: {
-    width: 88,
-    height: 88,
-    marginBottom: 16,
-    borderRadius: 20,
-  },
-  title: {
-    color: '#FFFFFF',
-    marginBottom: 6,
-  },
-  subtitle: {
-    color: '#FFFFFF',
-    opacity: 0.9,
-  },
-  locationPicker: {
-    width: '100%',
-    marginTop: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  picker: {
-    color: '#FFFFFF',
+    justifyContent: 'space-between',
   },
 
-  section: {
-    padding: 20,
-    gap: 12,
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  logo: { width: 52, height: 52 },
+  brandText: { fontSize: 18, fontWeight: '700' },
+
+  locationBtn: {
+    flexDirection: 'row',
+    gap: 6,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    maxWidth: 260,
   },
+  locationText: { fontSize: 13 },
+
+  dropdown: {
+    position: 'absolute',
+    top: 72,
+    right: 16,
+    width: 360,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    zIndex: 1000,
+  },
+
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+
+  content: { padding: 18 },
+
+  promptWrap: { marginBottom: 6 },
+  promptText: { fontSize: 18, fontWeight: '600', color: '#111827' },
+
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 8,
+    ...Platform.select({ web: { outlineStyle: 'none' as any } }),
+  },
+
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginRight: 8,
+  },
+
+  chipActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#C7D2FE',
+  },
+
   card: {
-    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#fff',
     borderRadius: 18,
     padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cardText: {
-    fontSize: 14,
-    opacity: 0.7,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#EEF0F3',
   },
 
-  infoSection: {
-    padding: 20,
-  },
-  infoText: {
-    fontSize: 14,
-    opacity: 0.8,
-  },
+  cardTitle: { fontSize: 16, fontWeight: '700' },
+  cardSub: { fontSize: 13, color: '#6B7280' },
 
-  footer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 12,
-    opacity: 0.5,
-  },
+  footerTitle: { fontWeight: '700', marginBottom: 4 },
+  footerText: { color: '#6B7280' },
+  footerSmall: { color: '#9CA3AF', fontSize: 12, marginTop: 12 },
 });
