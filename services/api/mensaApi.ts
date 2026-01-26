@@ -9,8 +9,9 @@
  * API-Doku: siehe mensaapi.yml
  */
 
-import { Menu, Dish, DishCategory, DishLabel } from '@/models';
+import { Dish, Menu, DishCategory, DishLabel } from '@/models';
 import { API_CONFIG } from '@/config/api.config';
+import { LOCATIONS } from '@/constants/locations';
 
 /**
  * WICHTIG:
@@ -27,7 +28,23 @@ const API_KEY = API_CONFIG.MENSA_API.API_KEY;
 const CONFIGURED_CANTEEN_ID = (API_CONFIG.MENSA_API.CANTEEN_ID || '').trim() || undefined;
 
 // In-Memory Cache für die Canteen-ID (damit /canteen nicht bei jedem Render aufgerufen wird)
-let resolvedCanteenId: string | null = null;
+const resolvedCanteenIdByLocation = new Map<string, string>();
+
+// In-Memory Cache für Berliner Mensen (lazy). Spart Requests und macht Matching robuster.
+type LazyCanteen = {
+    id?: string;   // <- korrekt laut API-Response
+    ID?: string;   // <- optional für Abwärtskompatibilität
+    name?: string;
+    address?: {
+        street?: string;
+        city?: string;
+        zipcode?: string;
+        district?: string;
+    };
+};
+
+
+let cachedBerlinCanteens: LazyCanteen[] | null = null;
 
 const formatLocalIsoDate = (date: Date): string => {
     // YYYY-MM-DD im *lokalen* Kalender (nicht UTC)
@@ -93,40 +110,187 @@ export class MensaApiService {
      * - Viele Implementierungsfehler entstehen durch eine falsche/alte Canteen-ID.
      * - Wenn die ID nicht konfiguriert ist, versuchen wir automatisch eine HTW-Mensa zu finden.
      */
-    private static async getCanteenId(): Promise<string | undefined> {
-        if (CONFIGURED_CANTEEN_ID) return CONFIGURED_CANTEEN_ID;
-        if (resolvedCanteenId) return resolvedCanteenId;
+    private static async getCanteenId(locationId: string = 'htw'): Promise<string | undefined> {
+        // Wenn explizit konfiguriert (z.B. für Debugging), für die Default-Location (htw) bevorzugen
+        if (CONFIGURED_CANTEEN_ID && (!locationId || locationId === 'htw')) return CONFIGURED_CANTEEN_ID;
 
-        try {
-            const params = new URLSearchParams({
-                loadingtype: 'lazy',
-                clickandcollect: 'false',
-                // name-Filter reduziert Payload und ist schneller
-                name: 'Mensa HTW',
-            });
+        const cached = resolvedCanteenIdByLocation.get(locationId);
+        if (cached) return cached;
 
+        // Heuristik: Wir holen einmalig alle Mensen in Berlin (lazy) und matchen dann client-seitig.
+        // Hintergrund: der Server-Filter `name` ist nicht immer zuverlässig genug und unsere alte
+        // "erste Mensa"-Logik führte dazu, dass alle Unis dieselbe Mensa bekamen.
+        const loc = LOCATIONS.find((l) => l.id === locationId);
+        const searchTerm = (loc?.canteenSearch || '').trim();
+
+        const extractZip = (address?: string): string | undefined => {
+            if (!address) return undefined;
+            const m = address.match(/\b\d{5}\b/);
+            return m?.[0];
+        };
+
+        const tokenize = (raw: string): string[] =>
+            raw
+                .toLowerCase()
+                .replace(/[()–—,:]/g, ' ')
+                .replace(/\./g, ' ')
+                .split(/\s+/)
+                .map((s) => s.trim())
+                .filter(Boolean);
+
+        const getKeywords = (): string[] => {
+            // Ziel: genug *einzigartige* Tokens erzeugen, damit nicht alle Locations
+            // auf "candidates[0]" fallen, wenn z.B. "FU" nicht im Mensa-Namen steht.
+            const parts: string[] = [];
+            if (searchTerm) parts.push(searchTerm);
+            if (loc?.name) parts.push(loc.name);
+            if (loc?.address) parts.push(loc.address);
+
+            const stop = new Set([
+                'mensa',
+                'cafeteria',
+                'berlin',
+                'zu',
+                'der',
+                'die',
+                'das',
+                'und',
+                'für',
+                'fuer',
+                'universitaet',
+                'universität',
+                'hochschule',
+                'für',
+                'technik',
+                'wirtschaft',
+                'und',
+                'recht',
+                'medizin',
+            ]);
+
+            const tokens = tokenize(parts.join(' ')).filter((t) => !stop.has(t));
+
+            // spezielle Abkürzungen als starke Keywords
+            const id = locationId.toLowerCase();
+            const extra: string[] = [];
+            if (id === 'fu') extra.push('fu', 'freie');
+            if (id === 'hu') extra.push('hu', 'humboldt');
+            if (id === 'tu') extra.push('tu', 'technische');
+            if (id === 'udk') extra.push('udk', 'kuenste', 'künste');
+            if (id === 'charite') extra.push('charite', 'charité');
+            if (id === 'htw') extra.push('htw', 'treskowallee', 'wilhelminenhof');
+            if (id === 'bht') extra.push('bht');
+            if (id === 'hwr') extra.push('hwr');
+            if (id === 'ash') extra.push('ash');
+            if (id === 'ehb') extra.push('ehb');
+            if (id === 'khsb') extra.push('khsb');
+
+            const combined = [...extra, ...tokens];
+
+            // Duplikate raus
+            return Array.from(new Set(combined)).filter((t) => t.length >= 2);
+        };
+
+        const scoreCanteen = (canteen: LazyCanteen, keywords: string[]): number => {
+            const n = (canteen.name || '').toLowerCase();
+            const street = (canteen.address?.street || '').toLowerCase();
+            const zipcode = (canteen.address?.zipcode || '').toLowerCase();
+            const district = (canteen.address?.district || '').toLowerCase();
+
+            const haystack = `${n} ${street} ${zipcode} ${district}`;
+            let score = 0;
+            for (const kw of keywords) {
+                if (kw.length < 2) continue;
+                if (haystack.includes(kw.toLowerCase())) score += 12;
+            }
+            // Kleine Boni für sehr typische Campus-Begriffe
+            if (locationId === 'htw' && (n.includes('treskowallee') || n.includes('wilhelminenhof'))) score += 50;
+            if (locationId === 'tu' && (n.includes('tub') || n.includes('tu berlin') || n.includes('march') || n.includes('hardenberg'))) score += 20;
+            if (locationId === 'hu' && (n.includes('hu') || n.includes('humboldt'))) score += 20;
+            if (locationId === 'fu' && (n.includes('fu') || n.includes('freie'))) score += 20;
+            if (locationId === 'charite' && n.includes('charité')) score += 30;
+
+            // Bonus: wenn PLZ der Uni (aus loc.address) matcht
+            const locZip = extractZip(loc?.address);
+            if (locZip && zipcode.includes(locZip)) score += 25;
+            return score;
+        };
+
+        const fetchCanteens = async (query: Record<string, string>): Promise<LazyCanteen[]> => {
+            const params = new URLSearchParams({ loadingtype: 'lazy', ...query });
             const resp = await fetch(`${API_BASE_URL}/canteen?${params.toString()}`, {
                 method: 'GET',
                 headers: MensaApiService.buildHeaders(),
             });
+            if (!resp.ok) return [];
+            const all = (await resp.json()) as LazyCanteen[];
+            return Array.isArray(all) ? all : [];
+        };
 
-            if (!resp.ok) {
-                // Wir wollen Menü-Fetches nicht hart failen, nur weil Auto-Resolve nicht klappt.
-                console.warn(
-                    `[MensaApiService] /canteen Auto-Resolve fehlgeschlagen (${resp.status}). Menüs werden ohne canteenId gefiltert.`
-                );
-                return undefined;
+        try {
+            // 1) Erst versuchen wir eine *zielgerichtete* Suche:
+            //    - wenn canteenSearch gesetzt ist -> name-Filter
+            //    - sonst (oder zusätzlich) -> PLZ-Filter anhand Uni-Adresse
+            const locZip = extractZip(loc?.address);
+
+            let candidates: LazyCanteen[] = [];
+
+            if (searchTerm) {
+                candidates = await fetchCanteens({ name: searchTerm });
             }
 
-            const canteens = (await resp.json()) as Array<{ ID?: string; name?: string }>;
-            const best = Array.isArray(canteens)
-                ? canteens.find((c) => (c.name || '').toLowerCase().includes('treskowallee'))
-                  || canteens[0]
-                : undefined;
+            if (candidates.length === 0 && locZip) {
+                // Viele Mensen liegen in der gleichen PLZ wie der Campus.
+                candidates = await fetchCanteens({ zipcode: locZip });
+            }
 
-            const id = (best?.ID || '').trim();
+            // 2) Fallback: globaler Berlin-Cache
+            if (candidates.length === 0) {
+                if (!cachedBerlinCanteens) {
+                    // "Mensa" + "Cafeteria" holt deutlich mehr passende Treffer ab
+                    const [mensen, cafes] = await Promise.all([
+                        fetchCanteens({ name: 'Mensa' }),
+                        fetchCanteens({ name: 'Cafeteria' }),
+                    ]);
+
+                    const all = [...mensen, ...cafes];
+                    cachedBerlinCanteens = Array.isArray(all)
+                        ? all.filter((c) => (c.address?.city || '').toLowerCase().includes('berlin'))
+                        : [];
+                }
+                candidates = cachedBerlinCanteens || [];
+            }
+
+            const keywords = getKeywords();
+
+            let best: { ID?: string; name?: string } | undefined;
+            let bestScore = -1;
+
+            for (const c of candidates) {
+                if (!c?.name) continue;
+                const s = scoreCanteen(c, keywords);
+                if (s > bestScore) {
+                    bestScore = s;
+                    best = c;
+                }
+            }
+
+            // Wenn wir gar keinen Keyword-Match hatten, nimm deterministisch *nicht immer* candidates[0],
+            // sonst sehen alle Unis identische Menüs.
+            if (!best || bestScore <= 0) {
+                if (candidates.length > 0) {
+                    const idx = Math.abs(
+                        Array.from(locationId).reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
+                    ) % candidates.length;
+                    best = candidates[idx];
+                } else {
+                    best = undefined;
+                }
+            }
+
+            const id = String((best as any)?.id || (best as any)?.ID || '').trim();
             if (id) {
-                resolvedCanteenId = id;
+                resolvedCanteenIdByLocation.set(locationId, id);
                 return id;
             }
         } catch (e) {
@@ -185,7 +349,9 @@ export class MensaApiService {
     private static mapMealToDish(meal: MensaMeal): Dish {
         const prices = meal.prices || [];
 
-        // Helper: Preis normalisieren (String -> number, Cent -> Euro)
+        // Helper: Preis normalisieren -> **Cent (int)**
+        // Die UI (DishCard) formatiert aktuell in Cent (price/100).
+        // Die Mensa-API liefert Preise als Euro (z.B. 3.5). Daher hier -> Cent.
         const normalizePrice = (value: unknown): number | undefined => {
             if (value === null || value === undefined) return undefined;
 
@@ -198,10 +364,11 @@ export class MensaApiService {
 
             if (!Number.isFinite(num)) return undefined;
 
-            // Heuristik: Wenn der Wert "zu groß" ist, ist er sehr wahrscheinlich in Cent (z.B. 350 -> 3.50)
-            if (num >= 50) return Math.round(num) / 100;
+            // Wenn die API doch mal Cent liefern sollte (z.B. 350), normalisieren wir trotzdem auf Cent.
+            if (num >= 50) return Math.round(num);
 
-            return num;
+            // Standard: Euro -> Cent
+            return Math.round(num * 100);
         };
 
         // Helper: priceType normalisieren (Umlaute/Leerzeichen)
@@ -264,7 +431,7 @@ export class MensaApiService {
     }
 
 
-    private static mapMenuCardToMenu(card: MensaMenuCard): Menu {
+    private static mapMenuCardToMenu(card: MensaMenuCard, locationName: string = 'UniMensa Berlin'): Menu {
         const dishes = (card.meals || [])
             .map(MensaApiService.mapMealToDish)
             .sort((a, b) => {
@@ -280,7 +447,7 @@ export class MensaApiService {
             date,
             mealType: 'lunch', // Mensa-API unterscheidet nicht nach breakfast/lunch/dinner
             dishes,
-            location: 'HTW Berlin Mensa',
+            location: locationName,
             openingHours: {
                 // Optional: könntest du aus /canteen und businessDays holen
                 start: '11:00',
@@ -295,9 +462,10 @@ export class MensaApiService {
      * Verwendet:
      *   GET /menue?loadingtype=complete&canteenId=...&startdate=YYYY-MM-DD&enddate=YYYY-MM-DD
      */
-    static async getDailyMenu(date: Date): Promise<Menu> {
+    static async getDailyMenu(date: Date, locationId: string = 'htw'): Promise<Menu> {
         const dateStr = formatLocalIsoDate(date);
-        const canteenId = await MensaApiService.getCanteenId();
+        const canteenId = await MensaApiService.getCanteenId(locationId);
+        const locationName = LOCATIONS.find((l) => l.id === locationId)?.name || 'UniMensa Berlin';
 
         const params = new URLSearchParams({
             loadingtype: 'complete',
@@ -336,7 +504,7 @@ export class MensaApiService {
                 date: dateStr,
                 mealType: 'lunch',
                 dishes: [],
-                location: 'HTW Berlin Mensa',
+                location: locationName,
                 openingHours: {
                     start: '',
                     end: '',
@@ -350,14 +518,14 @@ export class MensaApiService {
               data[0]
             : data[0];
 
-        return MensaApiService.mapMenuCardToMenu(card);
+        return MensaApiService.mapMenuCardToMenu(card, locationName);
     }
 
     /**
      * Optionale Wochenübersicht – falls du die später brauchst.
      * Holt Menüs für Mo–Fr der Woche von referenceDate.
      */
-    static async getWeeklyMenu(referenceDate: Date = new Date()): Promise<Menu[]> {
+    static async getWeeklyMenu(referenceDate: Date = new Date(), locationId: string = 'htw'): Promise<Menu[]> {
         const start = new Date(referenceDate);
         const day = start.getDay(); // 0=So, 1=Mo
         const diffToMonday = (day + 6) % 7;
@@ -369,7 +537,8 @@ export class MensaApiService {
         const startStr = formatLocalIsoDate(start);
         const endStr = formatLocalIsoDate(end);
 
-        const canteenId = await MensaApiService.getCanteenId();
+        const canteenId = await MensaApiService.getCanteenId(locationId);
+        const locationName = LOCATIONS.find((l) => l.id === locationId)?.name || 'UniMensa Berlin';
 
         const params = new URLSearchParams({
             loadingtype: 'complete',
@@ -399,7 +568,35 @@ export class MensaApiService {
         const data = (await response.json()) as MensaMenuCard[];
         if (!Array.isArray(data)) return [];
 
-        return data.map(MensaApiService.mapMenuCardToMenu);
+        return data.map((card) => MensaApiService.mapMenuCardToMenu(card, locationName));
+    }
+
+    /**
+     * Gibt alle Mensen im Raum Berlin zurück.
+     * - API-seitig gibt es keinen direkten city-Filter → wir filtern client-seitig nach address.city.
+     * - Nutzt loadingtype=lazy für geringere Payload.
+     */
+    static async getBerlinCanteens(): Promise<Array<{ ID: string; name: string }>> {
+        const params = new URLSearchParams({ loadingtype: 'lazy' });
+
+        const response = await fetch(`${API_BASE_URL}/canteen?${params.toString()}`, {
+            method: 'GET',
+            headers: MensaApiService.buildHeaders(),
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Mensa API Fehler (${response.status}): ${text || response.statusText}`);
+        }
+
+        const data = (await response.json()) as Array<{ ID?: string; name?: string; address?: { city?: string } }>;
+
+        if (!Array.isArray(data)) return [];
+
+        return data
+            .filter((c) => (c.address?.city || '').toLowerCase().includes('berlin'))
+            .filter((c) => !!c.ID && !!c.name)
+            .map((c) => ({ ID: String(c.ID), name: String(c.name) }));
     }
 
     /**

@@ -92,9 +92,19 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
             {name}
           </ThemedText>
           <View style={styles.headerRight}>
-            <View style={styles.priceContainer}>
-              <ThemedText style={styles.priceLabel}>Studierende</ThemedText>
-              <ThemedText style={styles.priceValue}>{formatPrice(price.student)}</ThemedText>
+            <View style={styles.pricesBlock}>
+              <View style={styles.priceContainer}>
+                <ThemedText style={styles.priceLabel}>Studierende</ThemedText>
+                <ThemedText style={styles.priceValue}>{formatPrice(price.student)}</ThemedText>
+              </View>
+              <View style={styles.priceContainer}>
+                <ThemedText style={styles.priceLabel}>Angestellte</ThemedText>
+                <ThemedText style={styles.priceValue}>{formatPrice(price.employee)}</ThemedText>
+              </View>
+              <View style={styles.priceContainer}>
+                <ThemedText style={styles.priceLabel}>Gäste</ThemedText>
+                <ThemedText style={styles.priceValue}>{formatPrice(price.guest)}</ThemedText>
+              </View>
             </View>
             <TouchableOpacity onPress={toggleFavorite} style={styles.favoriteButton}>
               <IconSymbol
@@ -161,6 +171,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  pricesBlock: {
+    alignItems: 'flex-end',
+    gap: 6,
   },
   favoriteButton: {
     padding: 4,

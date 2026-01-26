@@ -5,8 +5,6 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  TextInput,
-  Platform,
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,10 +13,9 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, UniColors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { UniColors } from '@/constants/theme';
 
-const LOCATION_STORAGE_KEY = '@mensa_location';
+import { LOCATIONS, LOCATION_STORAGE_KEY } from '@/constants/locations';
 
 const PROMPTS = [
   'Was möchtest du heute essen?',
@@ -29,43 +26,13 @@ const PROMPTS = [
   'Suchst du etwas ohne Allergene?',
 ];
 
-const LOCATIONS = [
-  { id: 'fu', name: 'Freie Universität Berlin (FU)', address: 'Königin-Luise-Straße 24, 14195 Berlin' },
-  { id: 'hu', name: 'Humboldt-Universität zu Berlin (HU)', address: 'Unter den Linden 6, 10117 Berlin' },
-  { id: 'tu', name: 'Technische Universität Berlin (TU)', address: 'Straße des 17. Juni 135, 10623 Berlin' },
-  { id: 'udk', name: 'Universität der Künste Berlin (UdK)', address: 'Einsteinufer 43, 10587 Berlin' },
-  { id: 'charite', name: 'Charité – Universitätsmedizin Berlin', address: 'Charitéplatz 1, 10117 Berlin' },
-  { id: 'bht', name: 'Berliner Hochschule für Technik (BHT)', address: 'Luxemburger Straße 10, 13353 Berlin' },
-  { id: 'htw', name: 'Hochschule für Technik und Wirtschaft (HTW)', address: 'Wilhelminenhofstraße 75A, 12459 Berlin' },
-  { id: 'hwr', name: 'Hochschule für Wirtschaft und Recht (HWR)', address: 'Alt-Friedrichsfelde 60, 10315 Berlin' },
-  { id: 'ash', name: 'Alice Salomon Hochschule (ASH)', address: 'Alice-Salomon-Platz 5, 12627 Berlin' },
-  { id: 'ehb', name: 'Evangelische Hochschule Berlin (EHB)', address: 'Teltower Damm 118–122, 14167 Berlin' },
-  { id: 'khsb', name: 'Katholische Hochschule für Sozialwesen Berlin (KHSB)', address: 'Köpenicker Allee 39–57, 10318 Berlin' },
-];
-
-type Filters = {
-  price: boolean;
-  allergens: boolean;
-  vegan: boolean;
-  vegetarian: boolean;
-  halal: boolean;
-};
-
 export default function HomeScreen() {
   const router = useRouter();
-  const scheme = useColorScheme();
-  const theme = Colors[scheme];
+  // Farbschema wird hier aktuell nicht benötigt
 
   const [locationOpen, setLocationOpen] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState('htw');
-  const [query, setQuery] = useState('');
-  const [filters, setFilters] = useState<Filters>({
-    price: false,
-    allergens: false,
-    vegan: false,
-    vegetarian: false,
-    halal: false,
-  });
+  // Suche/Filter sind bewusst entfernt (Anforderung: nicht auf Startseite anzeigen)
 
   const [promptIndex, setPromptIndex] = useState(0);
   const promptOpacity = useRef(new Animated.Value(1)).current;
@@ -123,10 +90,6 @@ export default function HomeScreen() {
     await AsyncStorage.setItem(LOCATION_STORAGE_KEY, id);
   };
 
-  const toggleFilter = (key: keyof Filters) => {
-    setFilters(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
   return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: '#F5F6F8' }]}>
         {/* HEADER */}
@@ -176,41 +139,7 @@ export default function HomeScreen() {
             <ThemedText style={styles.promptText}>{PROMPTS[promptIndex]}</ThemedText>
           </Animated.View>
 
-          {/* Search */}
-          <View style={styles.search}>
-            <IconSymbol name="magnifyingglass" size={16} color="#9CA3AF" />
-            <TextInput
-                placeholder="Gerichte suchen…"
-                value={query}
-                onChangeText={setQuery}
-                style={styles.searchInput}
-                placeholderTextColor="#9CA3AF"
-            />
-          </View>
 
-          {/* Filter Chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 12 }}>
-            {[
-              ['price', 'Preis', 'fork.knife'],
-              ['allergens', 'Allergene', 'exclamationmark.triangle'],
-              ['vegan', 'Vegan', 'leaf.fill'],
-              ['vegetarian', 'Vegetarisch', 'carrot'],
-              ['halal', 'Halal', 'moon.stars'],
-            ].map(([key, label, icon]) => (
-                <TouchableOpacity
-                    key={key}
-                    style={[styles.chip, filters[key as keyof Filters] && styles.chipActive]}
-                    onPress={() => toggleFilter(key as keyof Filters)}
-                >
-                  <IconSymbol
-                      name={icon as any}
-                      size={14}
-                      color={filters[key as keyof Filters] ? UniColors.primary : '#6B7280'}
-                  />
-                  <ThemedText>{label}</ThemedText>
-                </TouchableOpacity>
-            ))}
-          </ScrollView>
 
           {/* Feature Cards */}
           {[
@@ -229,10 +158,8 @@ export default function HomeScreen() {
               </TouchableOpacity>
           ))}
 
-          {/* Footer */}
+          {/* Footer (ohne Standort/Adresse, Anforderung) */}
           <View style={{ marginTop: 24 }}>
-            <ThemedText style={styles.footerTitle}>Standort</ThemedText>
-            <ThemedText style={styles.footerText}>{selectedLocation.address}</ThemedText>
             <ThemedText style={styles.footerSmall}>
               UniMensa Berlin · Gruppe 04 · HTW Berlin · WiSe 25/26
             </ThemedText>
@@ -295,41 +222,6 @@ const styles = StyleSheet.create({
   promptWrap: { marginBottom: 6 },
   promptText: { fontSize: 18, fontWeight: '600', color: '#111827' },
 
-  search: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 8,
-    ...Platform.select({ web: { outlineStyle: 'none' as any } }),
-  },
-
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginRight: 8,
-  },
-
-  chipActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#C7D2FE',
-  },
 
   card: {
     flexDirection: 'row',
@@ -346,7 +238,5 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700' },
   cardSub: { fontSize: 13, color: '#6B7280' },
 
-  footerTitle: { fontWeight: '700', marginBottom: 4 },
-  footerText: { color: '#6B7280' },
   footerSmall: { color: '#9CA3AF', fontSize: 12, marginTop: 12 },
 });

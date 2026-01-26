@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Menu } from '@/models';
 import { MensaOfflineService } from '@/services/offline/mensaOfflineService';
 
-export function useMenuData(date?: Date) {
+export function useMenuData(date?: Date, locationId: string = 'htw') {
     const [menu, setMenu] = useState<Menu | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<Error | null>(null);
@@ -16,7 +16,7 @@ export function useMenuData(date?: Date) {
                 setLoading(true);
                 setError(null);
 
-                const result = await MensaOfflineService.getDailyMenu(date || new Date());
+                const result = await MensaOfflineService.getDailyMenu(date || new Date(), locationId);
                 setMenu(result.data);
                 setSource(result.source);
             } catch (err) {
@@ -27,14 +27,14 @@ export function useMenuData(date?: Date) {
         };
 
         fetchMenu();
-    }, [date]);
+    }, [date, locationId]);
 
     const refresh = async () => {
         try {
             setLoading(true);
             setError(null);
 
-            const result = await MensaOfflineService.refreshDailyMenu(date || new Date());
+            const result = await MensaOfflineService.refreshDailyMenu(date || new Date(), locationId);
             setMenu(result.data);
             setSource(result.source);
         } catch (err) {

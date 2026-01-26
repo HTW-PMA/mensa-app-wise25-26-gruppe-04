@@ -16,6 +16,10 @@ interface MenuCardProps {
 }
 
 export function MenuCard({ dish, onPress }: MenuCardProps) {
+  const formatPrice = (price: number) => {
+    return (price / 100).toFixed(2).replace('.', ',') + ' €';
+  };
+
   return (
     <Pressable onPress={onPress}>
       <ThemedView style={styles.card}>
@@ -23,11 +27,19 @@ export function MenuCard({ dish, onPress }: MenuCardProps) {
           <ThemedText type="defaultSemiBold" style={styles.name}>
             {dish.name}
           </ThemedText>
-          <View style={styles.priceContainer}>
-            <ThemedText style={styles.price}>
-              {dish.price.student.toFixed(2)}€
-            </ThemedText>
-            <ThemedText style={styles.priceLabel}>Student</ThemedText>
+          <View style={styles.pricesBlock}>
+            <View style={styles.priceContainer}>
+              <ThemedText style={styles.price}>{formatPrice(dish.price.student)}</ThemedText>
+              <ThemedText style={styles.priceLabel}>Studierende</ThemedText>
+            </View>
+            <View style={styles.priceContainer}>
+              <ThemedText style={styles.price}>{formatPrice(dish.price.employee)}</ThemedText>
+              <ThemedText style={styles.priceLabel}>Angestellte</ThemedText>
+            </View>
+            <View style={styles.priceContainer}>
+              <ThemedText style={styles.price}>{formatPrice(dish.price.guest)}</ThemedText>
+              <ThemedText style={styles.priceLabel}>Gäste</ThemedText>
+            </View>
           </View>
         </View>
 
@@ -89,6 +101,10 @@ const styles = StyleSheet.create({
   name: {
     flex: 1,
     fontSize: 16,
+  },
+  pricesBlock: {
+    alignItems: 'flex-end',
+    gap: 6,
   },
   priceContainer: {
     alignItems: 'flex-end',

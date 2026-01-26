@@ -3,11 +3,34 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { DailyMenu } from '@/components/daily-menu';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { HTWColors } from '@/constants/theme';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LOCATIONS, LOCATION_STORAGE_KEY } from '@/constants/locations';
 
 export default function MenuScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState('htw');
+
+  const selectedLocation = useMemo(
+    () => LOCATIONS.find((l) => l.id === selectedLocationId) || LOCATIONS[0],
+    [selectedLocationId]
+  );
+
+  useEffect(() => {
+    AsyncStorage.getItem(LOCATION_STORAGE_KEY).then((v) => {
+      if (v) setSelectedLocationId(v);
+    });
+  }, []);
+
+  const setLocation = async (id: string) => {
+    setSelectedLocationId(id);
+    setLocationOpen(false);
+    await AsyncStorage.setItem(LOCATION_STORAGE_KEY, id);
+  };
 
   const goToPreviousDay = () => {
     const newDate = new Date(selectedDate);
@@ -30,7 +53,32 @@ export default function MenuScreen() {
       <ScrollView style={styles.container}>
       <ThemedView style={styles.header}>
         <ThemedText type="title">Menüplan</ThemedText>
-        <ThemedText>HTW Berlin Mensa</ThemedText>
+        <TouchableOpacity
+          style={styles.locationBtn}
+          onPress={() => setLocationOpen(!locationOpen)}
+          activeOpacity={0.8}
+        >
+          <ThemedText style={styles.locationText} numberOfLines={1}>
+            {selectedLocation.name}
+          </ThemedText>
+          <ThemedText style={styles.locationChevron}>›</ThemedText>
+        </TouchableOpacity>
+
+        {locationOpen && (
+          <View style={styles.dropdown}>
+            <ScrollView style={{ maxHeight: 320 }}>
+              {LOCATIONS.map((loc) => (
+                <TouchableOpacity
+                  key={loc.id}
+                  style={styles.dropdownItem}
+                  onPress={() => setLocation(loc.id)}
+                >
+                  <ThemedText>{loc.name}</ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
         
         {/* Datum-Navigation */}
         <View style={styles.dateNavigation}>
@@ -49,7 +97,7 @@ export default function MenuScreen() {
       </ThemedView>
 
       <ThemedView style={styles.content}>
-        <DailyMenu date={selectedDate} />
+        <DailyMenu date={selectedDate} locationId={selectedLocationId} locationName={selectedLocation.name} />
       </ThemedView>
       </ScrollView>
     </SafeAreaView>
@@ -68,6 +116,39 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 0,
     gap: 8,
+  },
+  locationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: HTWColors.border,
+    backgroundColor: HTWColors.backgroundCard,
+  },
+  locationText: {
+    flex: 1,
+  },
+  locationChevron: {
+    color: HTWColors.textLight,
+    fontSize: 18,
+    marginLeft: 8,
+  },
+  dropdown: {
+    marginTop: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: HTWColors.border,
+    backgroundColor: HTWColors.backgroundCard,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: HTWColors.border,
   },
   content: {
     flex: 1,

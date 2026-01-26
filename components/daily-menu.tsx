@@ -8,6 +8,8 @@ import {Menu} from "@/models";
 
 interface DailyMenuProps {
   date: Date;
+  locationId?: string;
+  locationName?: string;
 }
 
 const formatDate = (date: Date) => {
@@ -18,8 +20,8 @@ const formatDate = (date: Date) => {
   });
 };
 
-export const DailyMenu: React.FC<DailyMenuProps> = ({ date }) => {
-  const { menu, loading, error, refresh } = useMenuData(date);
+export const DailyMenu: React.FC<DailyMenuProps> = ({ date, locationId, locationName }) => {
+  const { menu, loading, error, refresh } = useMenuData(date, locationId);
 
   if (loading) {
     return (
@@ -94,6 +96,9 @@ export const DailyMenu: React.FC<DailyMenuProps> = ({ date }) => {
       <ThemedText type="title" style={styles.dateTitle}>
         {formatDate(date)}
       </ThemedText>
+      {locationName ? (
+        <ThemedText style={styles.locationText}>{locationName}</ThemedText>
+      ) : null}
       {dailyMenus.map((m) => (
         <MenuSection key={m.id} menu={m} />
       ))}
@@ -136,5 +141,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     paddingHorizontal: 20,
+  },
+  locationText: {
+    paddingHorizontal: 20,
+    marginTop: -14,
+    marginBottom: 14,
+    color: HTWColors.textLight,
   },
 });
