@@ -158,10 +158,15 @@ export default function HomeScreen() {
               </TouchableOpacity>
           ))}
 
-          {/* Footer (ohne Standort/Adresse, Anforderung) */}
-          <View style={{ marginTop: 24 }}>
+          {/* Footer mit dynamischem Standort */}
+          <View style={{ marginTop: 24, paddingBottom: 20 }}>
+            {selectedLocation.address && (
+                <ThemedText style={styles.locationFooter}>
+                  📍 {selectedLocation.address}
+                </ThemedText>
+            )}
             <ThemedText style={styles.footerSmall}>
-              UniMensa Berlin · Gruppe 04 · HTW Berlin · WiSe 25/26
+              UniMensa Berlin · Gruppe 04 · {selectedLocation.short} · WiSe 25/26
             </ThemedText>
           </View>
         </ScrollView>
@@ -238,5 +243,11 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700' },
   cardSub: { fontSize: 13, color: '#6B7280' },
 
-  footerSmall: { color: '#9CA3AF', fontSize: 12, marginTop: 12 },
+  locationFooter: {
+    fontSize: 13,
+    color: '#4B5563',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  footerSmall: { color: '#9CA3AF', fontSize: 12, marginTop: 4 },
 });
