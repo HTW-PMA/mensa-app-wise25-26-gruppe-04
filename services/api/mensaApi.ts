@@ -9,10 +9,9 @@
  * API-Doku: siehe mensaapi.yml
  */
 
-import { Dish, DishCategory, DishLabel } from '../../models/Dish';
-import { Menu } from '../../models/Menu';
-import { API_CONFIG } from '../../config/api.config';
-import { LOCATIONS } from '../../constants/locations';
+import { Dish, Menu, DishCategory, DishLabel } from '@/models';
+import { API_CONFIG } from '@/config/api.config';
+import { LOCATIONS } from '@/constants/locations';
 
 /**
  * WICHTIG:
@@ -577,7 +576,7 @@ export class MensaApiService {
      * - API-seitig gibt es keinen direkten city-Filter → wir filtern client-seitig nach address.city.
      * - Nutzt loadingtype=lazy für geringere Payload.
      */
-    static async getBerlinCanteens(): Promise<{ ID: string; name: string }[]> {
+    static async getBerlinCanteens(): Promise<Array<{ ID: string; name: string }>> {
         const params = new URLSearchParams({ loadingtype: 'lazy' });
 
         const response = await fetch(`${API_BASE_URL}/canteen?${params.toString()}`, {
@@ -590,7 +589,7 @@ export class MensaApiService {
             throw new Error(`Mensa API Fehler (${response.status}): ${text || response.statusText}`);
         }
 
-        const data = (await response.json()) as { ID?: string; name?: string; address?: { city?: string } }[];
+        const data = (await response.json()) as Array<{ ID?: string; name?: string; address?: { city?: string } }>;
 
         if (!Array.isArray(data)) return [];
 

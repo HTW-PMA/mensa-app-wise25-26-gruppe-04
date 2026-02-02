@@ -7,10 +7,10 @@ import { Dish } from './Dish';
 export interface Menu {
   id: string;
   date: string;
-  mealType: 'breakfast' | 'lunch' | 'dinner';
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'Mittagstisch' | string;
   dishes: Dish[];
-  location: string;
-  openingHours: {
+  location?: string;
+  openingHours?: {
     start: string;
     end: string;
   };
