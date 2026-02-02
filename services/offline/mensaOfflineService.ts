@@ -1,7 +1,7 @@
-import { MensaApiService } from '@/services/api/mensaApi';
+import { MensaApiService } from '../api/mensaApi';
 import { format } from 'date-fns';
-import { Menu } from '@/models';
-import { cleanupOldMenus, loadMenu, saveMenu } from '@/services/storage/mensaCache';
+import { Menu } from '../../models/Menu';
+import { cleanupOldMenus, loadMenu, saveMenu } from '../storage/mensaCache';
 
 // eure API nutzt YYYY-MM-DD (lokal) → wir speichern denselben Key
 function toIsoDateLocal(d: Date) {

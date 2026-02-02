@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
-import { Dish } from '@/models';
+import { Dish, DishLabel } from '@/models/Dish';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { HTWColors } from '@/constants/theme';
@@ -51,7 +51,7 @@ export function MenuCard({ dish, onPress }: MenuCardProps) {
 
         {dish.labels && dish.labels.length > 0 && (
           <View style={styles.labelsContainer}>
-            {dish.labels.map((label) => (
+            {dish.labels.map((label: DishLabel) => (
               <View key={label} style={styles.label}>
                 <Text style={styles.labelText}>{label}</Text>
               </View>

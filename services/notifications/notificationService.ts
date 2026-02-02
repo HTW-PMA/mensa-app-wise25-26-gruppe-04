@@ -13,6 +13,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -77,6 +79,7 @@ export async function scheduleDailyFavoriteCheck() {
         data: { type: 'daily_check' },
       },
       trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
         hour: 9,
         minute: 0,
         repeats: true,
@@ -113,12 +116,12 @@ export async function checkAndNotifyFavorites() {
     if (!menu || menu.dishes.length === 0) return;
 
     // Check for matching dishes
-    const matchingDishes = menu.dishes.filter(dish => 
-      favorites.some((fav: any) => fav.name === dish.name)
+    const matchingDishes = menu.dishes.filter((dish: { name: string }) =>
+      favorites.some((fav: { name: string }) => fav.name === dish.name)
     );
 
     if (matchingDishes.length > 0) {
-      const dishNames = matchingDishes.map(d => d.name).join(', ');
+      const dishNames = matchingDishes.map((d: { name: string }) => d.name).join(', ');
       
       await Notifications.scheduleNotificationAsync({
         content: {

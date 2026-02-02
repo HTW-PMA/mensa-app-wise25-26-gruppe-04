@@ -1,5 +1,5 @@
 import { getJson, setJson } from './jsonStorage';
-import { Menu } from '@/models';
+import { Menu } from '@/models/Menu';
 
 const KEY_PREFIX = '@mensa_app:cache';
 const KEY_CANTEENS = `${KEY_PREFIX}:canteens`;

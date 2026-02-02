@@ -2,11 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "lib": [
-      "ES2017",
-      "DOM"
-    ],
-    "target": "ES2017",
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
@@ -16,5 +12,8 @@
   "include": [
     "**/*.ts",
     "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
   ]
 }

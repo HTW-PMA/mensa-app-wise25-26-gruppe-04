@@ -101,17 +101,17 @@ export default function HomeScreen() {
 
 
           {/* Feature Cards */}
-          {[
-            ['Tagesmenü', 'Alle Gerichte mit Nährwerten und Allergenen', 'fork.knife', () => router.push('/(tabs)/menu')],
-            ['KI-Assistent', 'Personalisierte Empfehlungen', 'sparkles', () => router.push('/(tabs)/ai-assistant')],
-            ['Wartezeiten', 'Live-Auslastung der Mensen', 'clock.fill', () => router.push('/(tabs)/waiting-times')],
-            ['Nachhaltigkeit', 'CO₂-Bilanz und Herkunft', 'leaf.fill', () => router.push('/(tabs)/menu')],
-          ].map(([title, sub, icon, action]) => (
-              <TouchableOpacity key={title as string} style={styles.card} onPress={action as any}>
-                <IconSymbol name={icon as any} size={22} color={UniColors.primary} />
+          {([
+            { title: 'Tagesmenü', sub: 'Alle Gerichte mit Nährwerten und Allergenen', icon: 'fork.knife', route: '/(tabs)/menu' },
+            { title: 'KI-Assistent', sub: 'Personalisierte Empfehlungen', icon: 'sparkles', route: '/(tabs)/ai-assistant' },
+            { title: 'Wartezeiten', sub: 'Live-Auslastung der Mensen', icon: 'clock.fill', route: '/(tabs)/waiting-times' },
+            { title: 'Nachhaltigkeit', sub: 'CO₂-Bilanz und Herkunft', icon: 'leaf.fill', route: '/(tabs)/menu' },
+          ] as const).map((item) => (
+              <TouchableOpacity key={item.title} style={styles.card} onPress={() => router.push(item.route as any)}>
+                <IconSymbol name={item.icon as any} size={22} color={UniColors.primary} />
                 <View style={{ flex: 1 }}>
-                  <ThemedText style={styles.cardTitle}>{title}</ThemedText>
-                  <ThemedText style={styles.cardSub}>{sub}</ThemedText>
+                  <ThemedText style={styles.cardTitle}>{item.title}</ThemedText>
+                  <ThemedText style={styles.cardSub}>{item.sub}</ThemedText>
                 </View>
                 <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
               </TouchableOpacity>

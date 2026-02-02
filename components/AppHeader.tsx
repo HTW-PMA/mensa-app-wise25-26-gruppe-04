@@ -1,4 +1,4 @@
-import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Image } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Picker } from '@react-native-picker/picker';
 import { useState } from 'react';
@@ -66,7 +66,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         backgroundColor: '#FFFFFFEE',
-        backdropFilter: 'blur(20px)',
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
     },

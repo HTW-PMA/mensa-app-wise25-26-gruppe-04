@@ -32,6 +32,7 @@ export const UniColors = {
   backgroundDark: '#0B1220',
 
   border: '#E5E7EB',
+  borderLight: '#F3F4F6',
   shadow: 'rgba(0,0,0,0.08)',
 };
 

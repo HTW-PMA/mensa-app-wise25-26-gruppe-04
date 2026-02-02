@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Menu } from '@/models';
+import { Menu } from '@/models/Menu';
 import { MensaOfflineService } from '@/services/offline/mensaOfflineService';
 
 export function useMenuData(date?: Date, locationId: string = 'htw') {

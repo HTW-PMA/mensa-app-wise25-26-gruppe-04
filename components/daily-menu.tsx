@@ -4,7 +4,7 @@ import { ThemedText } from './themed-text';
 import { HTWColors } from '@/constants/theme';
 import { useMenuData } from '@/hooks/useMenuData';
 import { MenuSection } from './menu-section';
-import {Menu} from "@/models";
+import { Menu } from "@/models/Menu";
 
 interface DailyMenuProps {
   date: Date;
@@ -21,7 +21,7 @@ const formatDate = (date: Date) => {
 };
 
 export const DailyMenu: React.FC<DailyMenuProps> = ({ date, locationId, locationName }) => {
-  const { menu, loading, error, refresh } = useMenuData(date, locationId);
+  const { menu, loading, error } = useMenuData(date, locationId);
 
   if (loading) {
     return (

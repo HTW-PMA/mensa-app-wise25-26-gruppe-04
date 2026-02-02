@@ -218,7 +218,7 @@ async function checkFavoriteAvailability(): Promise<string> {
                         results.push(`${dateStr}: ${dishNames}`);
                     }
                 }
-            } catch (error) {
+            } catch {
                 // Skip this day if error
             }
         }

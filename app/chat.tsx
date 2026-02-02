@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import  aiService  from '../services/ai/aiService'; // Corrected import path based on the new structure
+import { answerMensaQuestion } from '../services/ai/aiService';
 
 // Define the message structure
 interface Message {
@@ -33,8 +33,8 @@ export default function ChatScreen() {
             }));
 
             // 2. Call the AI service
-            // The aiService.chat function expects the full history including the latest user message
-            const aiResponseText = await aiService.chat(historyForApi);
+            // answerMensaQuestion expects the question and history
+            const aiResponseText = await answerMensaQuestion(input.trim(), historyForApi);
 
             // 3. Add AI response to history
             const aiMessage: Message = { role: 'assistant', content: aiResponseText, id: Date.now() + 1 };

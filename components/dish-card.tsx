@@ -16,7 +16,7 @@ interface DishCardProps {
 export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
   const { name, description, price, labels, category, available } = dish;
   const [isFavorite, setIsFavorite] = useState(false);
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
 
   const getLabelIcon = (label: DishLabel) => {
@@ -126,7 +126,7 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
               const { name: iconName, color } = getLabelIcon(label);
               return (
                   <View key={label} style={styles.label}>
-                    <IconSymbol name={iconName} size={14} color={color} />
+                    <IconSymbol name={iconName as any} size={14} color={color} />
                     <ThemedText style={[styles.labelText, { color }]}>
                       {label.replace('_', ' ')}
                     </ThemedText>

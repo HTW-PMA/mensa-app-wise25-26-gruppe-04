@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { aiService } from '@/services/ai/aiService';
+import { answerMensaQuestion } from '../services/ai/aiService';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -26,7 +26,7 @@ export function useAIChat() {
       setMessages(newMessages);
       
       // Call AI service with full history
-      const response = await aiService.chat(newMessages);
+      const response = await answerMensaQuestion(userMessage, newMessages);
       
       // Add AI response to history
       setMessages([...newMessages, { role: 'assistant', content: response }]);
