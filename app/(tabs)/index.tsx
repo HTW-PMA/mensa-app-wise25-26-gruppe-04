@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   StyleSheet,
@@ -8,14 +8,13 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { UniColors } from '@/constants/theme';
 
-import { LOCATIONS, LOCATION_STORAGE_KEY } from '@/constants/locations';
+// Standort-/Mensaauswahl soll auf der Startseite NICHT angezeigt werden.
 
 const PROMPTS = [
   'Was möchtest du heute essen?',
@@ -30,24 +29,13 @@ export default function HomeScreen() {
   const router = useRouter();
   // Farbschema wird hier aktuell nicht benötigt
 
-  const [locationOpen, setLocationOpen] = useState(false);
-  const [selectedLocationId, setSelectedLocationId] = useState('htw');
-  // Suche/Filter sind bewusst entfernt (Anforderung: nicht auf Startseite anzeigen)
+  // Standort-/Mensaauswahl wird ausschließlich in der Menüansicht angezeigt.
 
   const [promptIndex, setPromptIndex] = useState(0);
   const promptOpacity = useRef(new Animated.Value(1)).current;
   const promptTranslateY = useRef(new Animated.Value(0)).current;
 
-  const selectedLocation = useMemo(
-      () => LOCATIONS.find(l => l.id === selectedLocationId) || LOCATIONS[0],
-      [selectedLocationId]
-  );
-
-  useEffect(() => {
-    AsyncStorage.getItem(LOCATION_STORAGE_KEY).then(v => {
-      if (v) setSelectedLocationId(v);
-    });
-  }, []);
+  // Hinweis: Persistierter Standort wird hier nicht benötigt, weil er nur in der Menüansicht relevant ist.
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -83,13 +71,6 @@ export default function HomeScreen() {
 
     return () => clearInterval(interval);
   }, []);
-
-  const setLocation = async (id: string) => {
-    setSelectedLocationId(id);
-    setLocationOpen(false);
-    await AsyncStorage.setItem(LOCATION_STORAGE_KEY, id);
-  };
-
   return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: '#F5F6F8' }]}>
         {/* HEADER */}
@@ -103,30 +84,8 @@ export default function HomeScreen() {
             <ThemedText style={styles.brandText}>UniMensa Berlin</ThemedText>
           </View>
 
-          <TouchableOpacity style={styles.locationBtn} onPress={() => setLocationOpen(!locationOpen)}>
-            <ThemedText style={styles.locationText} numberOfLines={1}>
-              {selectedLocation.name}
-            </ThemedText>
-            <IconSymbol name="chevron.right" size={16} color="#6B7280" />
-          </TouchableOpacity>
+          {/* Keine Standortanzeige auf der Startseite */}
         </View>
-
-        {/* DROPDOWN */}
-        {locationOpen && (
-            <View style={styles.dropdown}>
-              <ScrollView style={{ maxHeight: 320 }}>
-                {LOCATIONS.map(loc => (
-                    <TouchableOpacity
-                        key={loc.id}
-                        style={styles.dropdownItem}
-                        onPress={() => setLocation(loc.id)}
-                    >
-                      <ThemedText>{loc.name}</ThemedText>
-                    </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-        )}
 
         <ScrollView contentContainerStyle={styles.content}>
           {/* Animated Prompt */}
@@ -158,15 +117,10 @@ export default function HomeScreen() {
               </TouchableOpacity>
           ))}
 
-          {/* Footer mit dynamischem Standort */}
+          {/* Footer ohne Standort */}
           <View style={{ marginTop: 24, paddingBottom: 20 }}>
-            {selectedLocation.address && (
-                <ThemedText style={styles.locationFooter}>
-                  📍 {selectedLocation.address}
-                </ThemedText>
-            )}
             <ThemedText style={styles.footerSmall}>
-              UniMensa Berlin · Gruppe 04 · {selectedLocation.short} · WiSe 25/26
+              UniMensa Berlin · Gruppe 04 · WiSe 25/26
             </ThemedText>
           </View>
         </ScrollView>
@@ -192,35 +146,7 @@ const styles = StyleSheet.create({
   logo: { width: 52, height: 52 },
   brandText: { fontSize: 18, fontWeight: '700' },
 
-  locationBtn: {
-    flexDirection: 'row',
-    gap: 6,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    maxWidth: 260,
-  },
-  locationText: { fontSize: 13 },
-
-  dropdown: {
-    position: 'absolute',
-    top: 72,
-    right: 16,
-    width: 360,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    zIndex: 1000,
-  },
-
-  dropdownItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderColor: '#F0F0F0',
-  },
+  // Standort-Styles entfernt (Startseite zeigt keinen Standort)
 
   content: { padding: 18 },
 
@@ -243,11 +169,5 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700' },
   cardSub: { fontSize: 13, color: '#6B7280' },
 
-  locationFooter: {
-    fontSize: 13,
-    color: '#4B5563',
-    marginBottom: 4,
-    fontWeight: '500',
-  },
   footerSmall: { color: '#9CA3AF', fontSize: 12, marginTop: 4 },
 });
