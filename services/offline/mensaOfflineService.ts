@@ -15,6 +15,12 @@ type Result<T> = {
 };
 
 export class MensaOfflineService {
+    /**
+     * Holt das Tagesmenü mit Cache-Unterstützung.
+     * 
+     * @param date Das Datum für das Menü
+     * @param locationId Die Location-ID (z.B. 'htw') oder direkt eine Mensa-ID (z.B. '655ff175136d3b580c970f80')
+     */
     static async getDailyMenu(date: Date, locationId: string = 'htw'): Promise<Result<Menu>> {
         const dateIso = toIsoDateLocal(date);
 
@@ -25,8 +31,7 @@ export class MensaOfflineService {
             // Netzwerk zuerst
             const menu = await MensaApiService.getDailyMenu(date, locationId);
 
-            // canteenId steckt bei euch in menu.id nicht zuverlässig → wir speichern ohne canteenId (oder "unknown")
-            // wir verwenden locationId als Cache-Key, damit jede Uni ihren eigenen Cache hat
+            // Speichere im Cache mit locationId als Key (kann Uni-ID oder Mensa-ID sein)
             await saveMenu(locationId, dateIso, menu);
 
             return { data: menu, source: 'network' };
@@ -41,7 +46,7 @@ export class MensaOfflineService {
     }
 
     static async refreshDailyMenu(date: Date, locationId: string = 'htw'): Promise<Result<Menu>> {
-        // “Force refresh”: einfach getDailyMenu aufrufen, aber ohne Cache-Fallback:
+        // "Force refresh": einfach getDailyMenu aufrufen, aber ohne Cache-Fallback:
         const dateIso = toIsoDateLocal(date);
         const menu = await MensaApiService.getDailyMenu(date, locationId);
         await saveMenu(locationId, dateIso, menu);

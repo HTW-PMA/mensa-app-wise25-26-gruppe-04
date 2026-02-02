@@ -19,7 +19,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({ menu }) => {
   const { mealType, dishes, openingHours } = menu;
 
   const title = mealTypeMap[mealType] || mealType;
-  const time = `${openingHours.start} - ${openingHours.end}`;
+  const time = openingHours ? `${openingHours.start} - ${openingHours.end}` : null;
 
   if (dishes.length === 0) {
     return (
@@ -27,7 +27,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({ menu }) => {
         <ThemedText type="subtitle" style={styles.title}>
           {title}
         </ThemedText>
-        <ThemedText style={styles.time}>{time}</ThemedText>
+        {time && <ThemedText style={styles.time}>{time}</ThemedText>}
         <ThemedText style={styles.emptyText}>
           Keine Gerichte für diesen Zeitraum verfügbar.
         </ThemedText>
@@ -41,11 +41,11 @@ export const MenuSection: React.FC<MenuSectionProps> = ({ menu }) => {
         <ThemedText type="subtitle" style={styles.title}>
           {title}
         </ThemedText>
-        <ThemedText style={styles.time}>{time}</ThemedText>
+        {time && <ThemedText style={styles.time}>{time}</ThemedText>}
       </View>
       <View style={styles.dishesContainer}>
-        {dishes.map((dish) => (
-          <DishCard key={dish.id} dish={dish} />
+        {dishes.map((dish, index) => (
+          <DishCard key={dish.id || `dish-${index}`} dish={dish} />
         ))}
       </View>
     </View>

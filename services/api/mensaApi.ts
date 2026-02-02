@@ -401,269 +401,187 @@ export class MensaApiService {
                 employee,
                 guest,
             },
-            nutrition: undefined, // waterBilanz / co2Bilanz könntest du hier später mappen
-            allergens: [], // Additives könntest du auf Allergen-Enum mappen, wenn gewünscht
-            ingredients: undefined,
             labels: MensaApiService.mapBadges(meal.badges),
-            imageUrl: undefined,
-            available: true,
-        };
-    }
-
-    // Sortierreihenfolge für die Anzeige (Suppe -> Salat -> Hauptgericht -> Beilage -> Dessert -> Getränke)
-    private static categoryOrder(cat: DishCategory): number {
-        switch (cat) {
-            case DishCategory.SOUP:
-                return 1;
-            case DishCategory.SALAD:
-                return 2;
-            case DishCategory.MAIN_COURSE:
-                return 3;
-            case DishCategory.SIDE_DISH:
-                return 4;
-            case DishCategory.DESSERT:
-                return 5;
-            case DishCategory.BEVERAGE:
-                return 6;
-            default:
-                return 99;
-        }
-    }
-
-
-    private static mapMenuCardToMenu(card: MensaMenuCard, locationName: string = 'UniMensa Berlin'): Menu {
-        const dishes = (card.meals || [])
-            .map(MensaApiService.mapMealToDish)
-            .sort((a, b) => {
-                const c = MensaApiService.categoryOrder(a.category) - MensaApiService.categoryOrder(b.category);
-                if (c !== 0) return c;
-                return a.name.localeCompare(b.name, 'de');
-            });
-        const date = card.date;
-        const id = card.canteenId || card.canteeenId || `mensa-${date}`;
-
-        return {
-            id,
-            date,
-            mealType: 'lunch', // Mensa-API unterscheidet nicht nach breakfast/lunch/dinner
-            dishes,
-            location: locationName,
-            openingHours: {
-                // Optional: könntest du aus /canteen und businessDays holen
-                start: '11:00',
-                end: '14:30',
+            nutritionalInfo: {
+                calories: undefined,
+                protein: undefined,
+                carbs: undefined,
+                fat: undefined,
             },
+            allergens: meal.additives || [],
+            imageUrl: undefined,
+            co2Footprint: meal.co2Bilanz,
+            waterFootprint: meal.waterBilanz,
+            available: true, // Gerichte aus der API sind immer verfügbar
         };
     }
 
     /**
-     * Holt das Tages-Menü für ein Datum (für die konfigurierte Mensa).
-     *
-     * Verwendet:
-     *   GET /menue?loadingtype=complete&canteenId=...&startdate=YYYY-MM-DD&enddate=YYYY-MM-DD
+     * Holt das Tagesmenü für ein bestimmtes Datum.
+     * 
+     * @param date Das Datum für das Menü
+     * @param locationId Die Location-ID (z.B. 'htw') oder direkt eine Mensa-ID (z.B. '655ff175136d3b580c970f80')
+     * @returns Das Menü für den Tag
      */
     static async getDailyMenu(date: Date, locationId: string = 'htw'): Promise<Menu> {
-        const dateStr = formatLocalIsoDate(date);
-        const canteenId = await MensaApiService.getCanteenId(locationId);
-        const locationName = LOCATIONS.find((l) => l.id === locationId)?.name || 'UniMensa Berlin';
+        const dateIso = formatLocalIsoDate(date);
+
+        // Prüfe ob locationId eine direkte Mensa-ID ist (24 Zeichen Hex-String)
+        let canteenId: string | undefined;
+        if (locationId.length === 24 && /^[0-9a-f]{24}$/i.test(locationId)) {
+            // locationId ist bereits eine Mensa-ID
+            canteenId = locationId;
+        } else {
+            // locationId ist eine Uni-ID, hole die entsprechende Mensa-ID
+            canteenId = await MensaApiService.getCanteenId(locationId);
+        }
 
         const params = new URLSearchParams({
-            loadingtype: 'complete',
-            startdate: dateStr,
-            enddate: dateStr,
+            startdate: dateIso,
+            enddate: dateIso,
         });
 
         if (canteenId) {
             params.append('canteenId', canteenId);
         }
 
-        const response = await fetch(
-            `${API_BASE_URL}/menue?${params.toString()}`,
-            {
-                method: 'GET',
-                headers: MensaApiService.buildHeaders(),
-            }
-        );
+        const url = `${API_BASE_URL}/menue?${params.toString()}`;
 
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(
-                `Mensa API Fehler (${response.status}): ${
-                    text || response.statusText
-                }`
-            );
-        }
-
-        const data = (await response.json()) as MensaMenuCard[];
-
-        // Kein Menü für diesen Tag => leeres Menü zurückgeben,
-        // damit die UI "kein Menü verfügbar" anzeigen kann.
-        if (!Array.isArray(data) || data.length === 0) {
-            return {
-                id: `empty-${dateStr}`,
-                date: dateStr,
-                mealType: 'lunch',
-                dishes: [],
-                location: locationName,
-                openingHours: {
-                    start: '',
-                    end: '',
-                },
-            };
-        }
-
-        const card = canteenId
-            ?
-              data.find((c) => c.canteenId === canteenId || c.canteeenId === canteenId) ||
-              data[0]
-            : data[0];
-
-        return MensaApiService.mapMenuCardToMenu(card, locationName);
-    }
-
-    /**
-     * Optionale Wochenübersicht – falls du die später brauchst.
-     * Holt Menüs für Mo–Fr der Woche von referenceDate.
-     */
-    static async getWeeklyMenu(referenceDate: Date = new Date(), locationId: string = 'htw'): Promise<Menu[]> {
-        const start = new Date(referenceDate);
-        const day = start.getDay(); // 0=So, 1=Mo
-        const diffToMonday = (day + 6) % 7;
-        start.setDate(start.getDate() - diffToMonday);
-
-        const end = new Date(start);
-        end.setDate(start.getDate() + 4); // Mo–Fr
-
-        const startStr = formatLocalIsoDate(start);
-        const endStr = formatLocalIsoDate(end);
-
-        const canteenId = await MensaApiService.getCanteenId(locationId);
-        const locationName = LOCATIONS.find((l) => l.id === locationId)?.name || 'UniMensa Berlin';
-
-        const params = new URLSearchParams({
-            loadingtype: 'complete',
-            startdate: startStr,
-            enddate: endStr,
-        });
-
-        if (canteenId) params.append('canteenId', canteenId);
-
-        const response = await fetch(
-            `${API_BASE_URL}/menue?${params.toString()}`,
-            {
-                method: 'GET',
-                headers: MensaApiService.buildHeaders(),
-            }
-        );
-
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(
-                `Mensa API Fehler (${response.status}): ${
-                    text || response.statusText
-                }`
-            );
-        }
-
-        const data = (await response.json()) as MensaMenuCard[];
-        if (!Array.isArray(data)) return [];
-
-        return data.map((card) => MensaApiService.mapMenuCardToMenu(card, locationName));
-    }
-
-    /**
-     * Gibt alle Mensen im Raum Berlin zurück.
-     * - API-seitig gibt es keinen direkten city-Filter → wir filtern client-seitig nach address.city.
-     * - Nutzt loadingtype=lazy für geringere Payload.
-     */
-    static async getBerlinCanteens(): Promise<Array<{ ID: string; name: string }>> {
-        const params = new URLSearchParams({ loadingtype: 'lazy' });
-
-        const response = await fetch(`${API_BASE_URL}/canteen?${params.toString()}`, {
+        const resp = await fetch(url, {
             method: 'GET',
             headers: MensaApiService.buildHeaders(),
         });
 
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(`Mensa API Fehler (${response.status}): ${text || response.statusText}`);
+        if (!resp.ok) {
+            const text = await resp.text();
+            throw new Error(
+                `[MensaApiService] /menue Request fehlgeschlagen: ${resp.status} ${resp.statusText}\n${text}`
+            );
         }
 
-        const data = (await response.json()) as Array<{ ID?: string; name?: string; address?: { city?: string } }>;
+        const data = (await resp.json()) as MensaMenuCard[];
 
-        if (!Array.isArray(data)) return [];
+        if (!Array.isArray(data) || data.length === 0) {
+            // Kein Menü für diesen Tag
+            return {
+                id: `${canteenId || 'unknown'}-${dateIso}`,
+                date: date.toISOString(),
+                mealType: 'Mittagstisch',
+                dishes: [],
+            };
+        }
 
-        return data
-            .filter((c) => (c.address?.city || '').toLowerCase().includes('berlin'))
-            .filter((c) => !!c.ID && !!c.name)
-            .map((c) => ({ ID: String(c.ID), name: String(c.name) }));
+        // Nimm die erste MenuCard (sollte nur eine sein, da wir startdate == enddate haben)
+        const card = data[0];
+        const meals = card.meals || [];
+
+        return {
+            id: `${canteenId || 'unknown'}-${dateIso}`,
+            date: date.toISOString(),
+            mealType: 'Mittagstisch',
+            dishes: meals.map(MensaApiService.mapMealToDish),
+        };
     }
 
     /**
-     * Suche nach Gerichten (optional, falls du später ein Suchfeld nutzt).
-     * Nutzt GET /meal?name=...&loadingtype=mealonly
+     * Holt das Wochenmenü für eine bestimmte Woche.
      */
-    static async searchDishes(query: string): Promise<Dish[]> {
+    static async getWeeklyMenu(startDate: Date, locationId: string = 'htw'): Promise<Menu[]> {
+        const start = formatLocalIsoDate(startDate);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 6);
+        const end = formatLocalIsoDate(endDate);
+
+        // Prüfe ob locationId eine direkte Mensa-ID ist
+        let canteenId: string | undefined;
+        if (locationId.length === 24 && /^[0-9a-f]{24}$/i.test(locationId)) {
+            canteenId = locationId;
+        } else {
+            canteenId = await MensaApiService.getCanteenId(locationId);
+        }
+
         const params = new URLSearchParams({
-            loadingtype: 'mealonly',
+            startdate: start,
+            enddate: end,
+        });
+
+        if (canteenId) {
+            params.append('canteenId', canteenId);
+        }
+
+        const url = `${API_BASE_URL}/menue?${params.toString()}`;
+
+        const resp = await fetch(url, {
+            method: 'GET',
+            headers: MensaApiService.buildHeaders(),
+        });
+
+        if (!resp.ok) {
+            const text = await resp.text();
+            throw new Error(
+                `[MensaApiService] /menue Request fehlgeschlagen: ${resp.status} ${resp.statusText}\n${text}`
+            );
+        }
+
+        const data = (await resp.json()) as MensaMenuCard[];
+
+        if (!Array.isArray(data)) {
+            return [];
+        }
+
+        return data.map((card) => {
+            const meals = card.meals || [];
+            const cardDate = card.date ? new Date(card.date) : startDate;
+
+            return {
+                id: `${canteenId || 'unknown'}-${formatLocalIsoDate(cardDate)}`,
+                date: cardDate.toISOString(),
+                mealType: 'Mittagstisch',
+                dishes: meals.map(MensaApiService.mapMealToDish),
+            };
+        });
+    }
+
+    /**
+     * Sucht nach Gerichten anhand eines Suchbegriffs.
+     */
+    static async searchDishes(query: string, locationId: string = 'htw'): Promise<Dish[]> {
+        // Prüfe ob locationId eine direkte Mensa-ID ist
+        let canteenId: string | undefined;
+        if (locationId.length === 24 && /^[0-9a-f]{24}$/i.test(locationId)) {
+            canteenId = locationId;
+        } else {
+            canteenId = await MensaApiService.getCanteenId(locationId);
+        }
+
+        const params = new URLSearchParams({
             name: query,
         });
 
-        const response = await fetch(
-            `${API_BASE_URL}/meal?${params.toString()}`,
-            {
-                method: 'GET',
-                headers: MensaApiService.buildHeaders(),
-            }
-        );
-
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(
-                `Mensa API Fehler (${response.status}): ${
-                    text || response.statusText
-                }`
-            );
+        if (canteenId) {
+            params.append('canteenId', canteenId);
         }
 
-        const data = (await response.json()) as MensaMeal[];
-        if (!Array.isArray(data)) return [];
+        const url = `${API_BASE_URL}/meal?${params.toString()}`;
 
-        return data.map(MensaApiService.mapMealToDish);
-    }
-
-    /**
-     * Gericht-Details by ID (nutzt /meal mit ID-Filter).
-     */
-    static async getDishDetails(dishId: string): Promise<Dish> {
-        const params = new URLSearchParams({
-            loadingtype: 'complete',
-            ID: dishId,
+        const resp = await fetch(url, {
+            method: 'GET',
+            headers: MensaApiService.buildHeaders(),
         });
 
-        const response = await fetch(
-            `${API_BASE_URL}/meal?${params.toString()}`,
-            {
-                method: 'GET',
-                headers: MensaApiService.buildHeaders(),
-            }
-        );
-
-        if (!response.ok) {
-            const text = await response.text();
+        if (!resp.ok) {
+            const text = await resp.text();
             throw new Error(
-                `Mensa API Fehler (${response.status}): ${
-                    text || response.statusText
-                }`
+                `[MensaApiService] /meal Request fehlgeschlagen: ${resp.status} ${resp.statusText}\n${text}`
             );
         }
 
-        const data = (await response.json()) as MensaMeal[];
+        const data = (await resp.json()) as MensaMeal[];
 
-        if (!Array.isArray(data) || data.length === 0) {
-            throw new Error('Gericht nicht gefunden');
+        if (!Array.isArray(data)) {
+            return [];
         }
 
-        return MensaApiService.mapMealToDish(data[0]);
+        return data.map(MensaApiService.mapMealToDish);
     }
 }
