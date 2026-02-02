@@ -4,6 +4,7 @@ import { View, Text, TextInput, Button, FlatList, StyleSheet, ActivityIndicator,
 import { answerMensaQuestion } from '../../services/ai/aiService';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 // Define the message structure
 interface Message {
@@ -16,6 +17,16 @@ export default function AIAssistantScreen() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    // Theme colors
+    const primaryColor = useThemeColor({}, 'primary');
+    const surfaceColor = useThemeColor({}, 'surface');
+    const borderColor = useThemeColor({}, 'border');
+    const textSecondaryColor = useThemeColor({}, 'textSecondary');
+    const backgroundColor = useThemeColor({}, 'background');
+    const userMsgBg = useThemeColor({ light: '#007AFF', dark: '#007AFF' }, 'primary');
+    const assistantMsgBg = useThemeColor({ light: '#FFFFFF', dark: '#1C1C1E' }, 'surface');
+    const inputBg = useThemeColor({ light: '#FFFFFF', dark: '#1C1C1E' }, 'surface');
 
     const handleSend = useCallback(async () => {
         if (input.trim() === '') return;
@@ -51,83 +62,83 @@ export default function AIAssistantScreen() {
     }, [input, messages]);
 
     const renderItem = ({ item }: { item: Message }) => (
-        <View style={[styles.messageContainer, item.role === 'user' ? styles.userMessage : styles.assistantMessage]}>
-            <Text style={[styles.messageText, item.role === 'user' ? styles.userText : styles.assistantText]}>{item.content}</Text>
+        <View style={[
+            styles.messageContainer,
+            item.role === 'user' ? [styles.userMessage, { backgroundColor: userMsgBg }] : [styles.assistantMessage, { backgroundColor: assistantMsgBg }]
+        ]}>
+            <ThemedText style={[styles.messageText, item.role === 'user' && { color: '#fff' }]}>{item.content}</ThemedText>
         </View>
     );
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-            {/* Header - FIXED: Jetzt oben */}
-            <ThemedView style={styles.header}>
-                <ThemedText type="title">KI-Assistent</ThemedText>
-                <ThemedText>Ernährungsberatung & Empfehlungen</ThemedText>
-                <ThemedText style={styles.introText}>
-                    Wie kann ich helfen? Fragen Sie nach Empfehlungen, Nährwertinformationen oder Allergenen.
-                </ThemedText>
-            </ThemedView>
+        <ThemedView style={styles.container}>
+            <SafeAreaView style={styles.safeArea} edges={['top']}>
+                <KeyboardAvoidingView
+                    style={styles.container}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+                >
+                    {/* Header */}
+                    <ThemedView style={[styles.header, { borderBottomColor: borderColor }]}>
+                        <ThemedText type="title">KI-Assistent</ThemedText>
+                        <ThemedText style={{ color: textSecondaryColor }}>Ernährungsberatung & Empfehlungen</ThemedText>
+                        <ThemedText style={[styles.introText, { color: textSecondaryColor }]}>
+                            Wie kann ich helfen? Fragen Sie nach Empfehlungen, Nährwertinformationen oder Allergenen.
+                        </ThemedText>
+                    </ThemedView>
 
-            {/* Chat Messages - FIXED: Nicht inverted, neueste Nachricht unten */}
-            <FlatList
-                data={messages}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.id.toString()}
-                style={styles.chatList}
-                contentContainerStyle={styles.chatListContent}
-            />
+                    {/* Chat Messages */}
+                    <FlatList
+                        data={messages}
+                        renderItem={renderItem}
+                        keyExtractor={(item) => item.id.toString()}
+                        style={styles.chatList}
+                        contentContainerStyle={styles.chatListContent}
+                    />
 
-            {isLoading && (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color="#007AFF" />
-                    <Text style={styles.loadingText}>Mensa-Bot antwortet...</Text>
-                </View>
-            )}
+                    {isLoading && (
+                        <View style={[styles.loadingContainer, { backgroundColor: borderColor }]}>
+                            <ActivityIndicator size="small" color={primaryColor} />
+                            <ThemedText style={styles.loadingText}>Mensa-Bot antwortet...</ThemedText>
+                        </View>
+                    )}
 
-            {/* Input - Bleibt unten */}
-            <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    value={input}
-                    onChangeText={setInput}
-                    placeholder="Frage den Mensa-Bot..."
-                    placeholderTextColor="#999"
-                    onSubmitEditing={handleSend}
-                    returnKeyType="send"
-                    editable={!isLoading}
-                />
-                <Button title="Senden" onPress={handleSend} disabled={isLoading || input.trim() === ''} />
-            </View>
-        </KeyboardAvoidingView>
-        </SafeAreaView>
+                    {/* Input */}
+                    <View style={[styles.inputContainer, { backgroundColor: inputBg, borderTopColor: borderColor }]}>
+                        <TextInput
+                            style={[styles.input, { borderColor: borderColor, color: useThemeColor({}, 'text') }]}
+                            value={input}
+                            onChangeText={setInput}
+                            placeholder="Frage den Mensa-Bot..."
+                            placeholderTextColor={textSecondaryColor}
+                            onSubmitEditing={handleSend}
+                            returnKeyType="send"
+                            editable={!isLoading}
+                        />
+                        <Button title="Senden" onPress={handleSend} disabled={isLoading || input.trim() === ''} color={primaryColor} />
+                    </View>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </ThemedView>
     );
 }
 
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#f0f0f0',
     },
     container: {
         flex: 1,
-        backgroundColor: '#f0f0f0',
     },
     header: {
         padding: 20,
         paddingTop: 10,
         gap: 8,
-        backgroundColor: 'transparent',
         borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
     },
     introText: {
         marginTop: 10,
         fontSize: 14,
-        color: '#555',
     },
     chatList: {
         flex: 1,
@@ -138,41 +149,30 @@ const styles = StyleSheet.create({
     },
     messageContainer: {
         maxWidth: '80%',
-        padding: 10,
-        borderRadius: 15,
+        padding: 12,
+        borderRadius: 18,
         marginVertical: 5,
     },
     userMessage: {
         alignSelf: 'flex-end',
-        backgroundColor: '#007AFF',
-        borderBottomRightRadius: 5,
+        borderBottomRightRadius: 4,
     },
     assistantMessage: {
         alignSelf: 'flex-start',
-        backgroundColor: '#fff',
-        borderBottomLeftRadius: 5,
+        borderBottomLeftRadius: 4,
     },
     messageText: {
         fontSize: 16,
     },
-    userText: {
-        color: '#fff',
-    },
-    assistantText: {
-        color: '#000',
-    },
     inputContainer: {
         flexDirection: 'row',
-        padding: 10,
-        backgroundColor: '#fff',
+        padding: 12,
         borderTopWidth: 1,
-        borderTopColor: '#ccc',
         alignItems: 'center',
     },
     input: {
         flex: 1,
         borderWidth: 1,
-        borderColor: '#ccc',
         borderRadius: 20,
         paddingHorizontal: 15,
         paddingVertical: 8,
@@ -183,10 +183,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         padding: 10,
-        backgroundColor: '#e0e0e0',
     },
     loadingText: {
         marginLeft: 10,
-        color: '#555',
+        fontSize: 14,
     },
 });

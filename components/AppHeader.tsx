@@ -2,6 +2,7 @@ import { View, StyleSheet, Image } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Picker } from '@react-native-picker/picker';
 import { useState } from 'react';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 const UNIVERSITIES = [
     'Freie Universität Berlin (FU)',
@@ -30,9 +31,13 @@ const UNIVERSITIES = [
 
 export function AppHeader() {
     const [selected, setSelected] = useState('HTW Berlin');
+    const surfaceColor = useThemeColor({}, 'surface');
+    const borderColor = useThemeColor({}, 'border');
+    const rowColor = useThemeColor({ light: '#F2F3F5', dark: '#2C2C2E' }, 'background');
+    const textColor = useThemeColor({}, 'text');
 
     return (
-        <View style={styles.wrapper}>
+        <View style={[styles.wrapper, { backgroundColor: surfaceColor, borderBottomColor: borderColor }]}>
             <View style={styles.left}>
                 <Image
                     source={require('@/assets/images/home-icon.png')}
@@ -43,14 +48,15 @@ export function AppHeader() {
                 </ThemedText>
             </View>
 
-            <View style={styles.right}>
+            <View style={[styles.right, { backgroundColor: rowColor }]}>
                 <Picker
                     selectedValue={selected}
                     onValueChange={setSelected}
-                    style={styles.picker}
+                    style={[styles.picker, { color: textColor }]}
+                    dropdownIconColor={textColor}
                 >
                     {UNIVERSITIES.map(u => (
-                        <Picker.Item key={u} label={u} value={u} />
+                        <Picker.Item key={u} label={u} value={u} color={textColor} />
                     ))}
                 </Picker>
             </View>
@@ -65,9 +71,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#FFFFFFEE',
         borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
     },
     left: {
         flexDirection: 'row',
@@ -83,7 +87,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     right: {
-        backgroundColor: '#F2F3F5',
         borderRadius: 12,
         overflow: 'hidden',
     },

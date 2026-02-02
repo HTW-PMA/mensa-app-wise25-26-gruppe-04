@@ -4,7 +4,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { DailyMenu } from '@/components/daily-menu';
 import { useEffect, useMemo, useState } from 'react';
-import { HTWColors } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UNIVERSITIES } from '@/constants/universities';
@@ -18,18 +18,25 @@ export default function MenuScreen() {
 
   const [universityOpen, setUniversityOpen] = useState(false);
   const [canteenOpen, setCanteenOpen] = useState(false);
-  
+
   const [selectedUniversityId, setSelectedUniversityId] = useState('htw');
   const [selectedCanteenId, setSelectedCanteenId] = useState<string | null>(null);
 
+  // Theme colors
+  const primaryColor = useThemeColor({}, 'primary');
+  const surfaceColor = useThemeColor({}, 'surface');
+  const borderColor = useThemeColor({}, 'border');
+  const textSecondaryColor = useThemeColor({}, 'textSecondary');
+  const textInverseColor = useThemeColor({}, 'textInverse');
+
   const selectedUniversity = useMemo(
-    () => UNIVERSITIES.find((u) => u.id === selectedUniversityId) || UNIVERSITIES[0],
-    [selectedUniversityId]
+      () => UNIVERSITIES.find((u) => u.id === selectedUniversityId) || UNIVERSITIES[0],
+      [selectedUniversityId]
   );
 
   const availableCanteens = useMemo(
-    () => selectedUniversity.canteens || [],
-    [selectedUniversity]
+      () => selectedUniversity.canteens || [],
+      [selectedUniversity]
   );
 
   const selectedCanteen = useMemo(() => {
@@ -47,7 +54,7 @@ export default function MenuScreen() {
           AsyncStorage.getItem(UNIVERSITY_STORAGE_KEY),
           AsyncStorage.getItem(CANTEEN_STORAGE_KEY),
         ]);
-        
+
         if (savedUni) {
           setSelectedUniversityId(savedUni);
         }
@@ -103,135 +110,139 @@ export default function MenuScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView style={styles.container}>
-        <ThemedView style={styles.header}>
-          <ThemedText type="title">Menüplan</ThemedText>
-          
-          {/* Universität Dropdown */}
-          <TouchableOpacity
-            style={styles.locationBtn}
-            onPress={() => {
-              setUniversityOpen(!universityOpen);
-              setCanteenOpen(false);
-            }}
-            activeOpacity={0.8}
-          >
-            <ThemedText style={styles.locationText} numberOfLines={1}>
-              {selectedUniversity.name}
-            </ThemedText>
-            <ThemedText style={styles.locationChevron}>›</ThemedText>
-          </TouchableOpacity>
+      <ThemedView style={styles.safeArea}>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <ScrollView style={styles.container}>
+            <ThemedView style={styles.header}>
+              <ThemedText type="title">Menüplan</ThemedText>
 
-          {universityOpen && (
-            <View style={styles.dropdown}>
-              <ScrollView style={{ maxHeight: 320 }}>
-                {UNIVERSITIES.map((uni) => (
-                  <TouchableOpacity
-                    key={uni.id}
-                    style={[
-                      styles.dropdownItem,
-                      uni.id === selectedUniversityId && styles.dropdownItemSelected,
-                    ]}
-                    onPress={() => setUniversity(uni.id)}
-                  >
-                    <ThemedText
-                      style={uni.id === selectedUniversityId && styles.selectedText}
-                    >
-                      {uni.name}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Campus/Mensa Dropdown - nur anzeigen wenn mehrere Mensen vorhanden */}
-          {availableCanteens.length > 1 && (
-            <>
+              {/* Universität Dropdown */}
               <TouchableOpacity
-                style={[styles.locationBtn, styles.canteenBtn]}
-                onPress={() => {
-                  setCanteenOpen(!canteenOpen);
-                  setUniversityOpen(false);
-                }}
-                activeOpacity={0.8}
+                  style={[styles.locationBtn, { backgroundColor: surfaceColor, borderColor }]}
+                  onPress={() => {
+                    setUniversityOpen(!universityOpen);
+                    setCanteenOpen(false);
+                  }}
+                  activeOpacity={0.8}
               >
-                <View style={styles.canteenBtnContent}>
-                  <ThemedText style={styles.canteenLabel}>Campus:</ThemedText>
-                  <ThemedText style={styles.locationText} numberOfLines={1}>
-                    {selectedCanteen?.name || 'Bitte wählen'}
-                  </ThemedText>
-                </View>
-                <ThemedText style={styles.locationChevron}>›</ThemedText>
+                <ThemedText style={styles.locationText} numberOfLines={1}>
+                  {selectedUniversity.name}
+                </ThemedText>
+                <ThemedText style={[styles.locationChevron, { color: textSecondaryColor }]}>›</ThemedText>
               </TouchableOpacity>
 
-              {canteenOpen && (
-                <View style={styles.dropdown}>
-                  <ScrollView style={{ maxHeight: 280 }}>
-                    {availableCanteens.map((canteen) => (
-                      <TouchableOpacity
-                        key={canteen.id}
-                        style={[
-                          styles.dropdownItem,
-                          canteen.id === selectedCanteen?.id && styles.dropdownItemSelected,
-                          !canteen.hasMenu && styles.dropdownItemDisabled,
-                        ]}
-                        onPress={() => setCanteen(canteen.id)}
-                      >
-                        <View>
-                          <ThemedText
-                            style={[
-                              canteen.id === selectedCanteen?.id && styles.selectedText,
-                              !canteen.hasMenu && styles.disabledText,
-                            ]}
+              {universityOpen && (
+                  <View style={[styles.dropdown, { backgroundColor: surfaceColor, borderColor }]}>
+                    <ScrollView style={{ maxHeight: 320 }}>
+                      {UNIVERSITIES.map((uni) => (
+                          <TouchableOpacity
+                              key={uni.id}
+                              style={[
+                                styles.dropdownItem,
+                                { borderBottomColor: borderColor },
+                                uni.id === selectedUniversityId && { backgroundColor: primaryColor + '15' },
+                              ]}
+                              onPress={() => setUniversity(uni.id)}
                           >
-                            {canteen.name}
-                          </ThemedText>
-                          <ThemedText style={styles.canteenAddress}>
-                            {canteen.address}
-                          </ThemedText>
-                          {!canteen.hasMenu && (
-                            <ThemedText style={styles.noMenuHint}>
-                              Derzeit kein Menü verfügbar
+                            <ThemedText
+                                style={uni.id === selectedUniversityId && { color: primaryColor, fontWeight: '600' }}
+                            >
+                              {uni.name}
                             </ThemedText>
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
+                          </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
               )}
-            </>
-          )}
 
-          {/* Datum-Navigation */}
-          <View style={styles.dateNavigation}>
-            <TouchableOpacity style={styles.navButton} onPress={goToPreviousDay}>
-              <ThemedText style={styles.navButtonText}>◀ Zurück</ThemedText>
-            </TouchableOpacity>
+              {/* Campus/Mensa Dropdown - nur anzeigen wenn mehrere Mensen vorhanden */}
+              {availableCanteens.length > 1 && (
+                  <>
+                    <TouchableOpacity
+                        style={[styles.locationBtn, styles.canteenBtn, { backgroundColor: surfaceColor, borderColor }]}
+                        onPress={() => {
+                          setCanteenOpen(!canteenOpen);
+                          setUniversityOpen(false);
+                        }}
+                        activeOpacity={0.8}
+                    >
+                      <View style={styles.canteenBtnContent}>
+                        <ThemedText style={[styles.canteenLabel, { color: textSecondaryColor }]}>Campus:</ThemedText>
+                        <ThemedText style={styles.locationText} numberOfLines={1}>
+                          {selectedCanteen?.name || 'Bitte wählen'}
+                        </ThemedText>
+                      </View>
+                      <ThemedText style={[styles.locationChevron, { color: textSecondaryColor }]}>›</ThemedText>
+                    </TouchableOpacity>
 
-            <TouchableOpacity style={styles.todayButton} onPress={goToToday}>
-              <ThemedText style={styles.todayButtonText}>Heute</ThemedText>
-            </TouchableOpacity>
+                    {canteenOpen && (
+                        <View style={[styles.dropdown, { backgroundColor: surfaceColor, borderColor }]}>
+                          <ScrollView style={{ maxHeight: 280 }}>
+                            {availableCanteens.map((canteen) => (
+                                <TouchableOpacity
+                                    key={canteen.id}
+                                    style={[
+                                      styles.dropdownItem,
+                                      { borderBottomColor: borderColor },
+                                      canteen.id === selectedCanteen?.id && { backgroundColor: primaryColor + '15' },
+                                      !canteen.hasMenu && { opacity: 0.6 },
+                                    ]}
+                                    onPress={() => setCanteen(canteen.id)}
+                                >
+                                  <View>
+                                    <ThemedText
+                                        style={[
+                                          canteen.id === selectedCanteen?.id && { color: primaryColor, fontWeight: '600' },
+                                          !canteen.hasMenu && { color: textSecondaryColor },
+                                        ]}
+                                    >
+                                      {canteen.name}
+                                    </ThemedText>
+                                    <ThemedText style={[styles.canteenAddress, { color: textSecondaryColor }]}>
+                                      {canteen.address}
+                                    </ThemedText>
+                                    {!canteen.hasMenu && (
+                                        <ThemedText style={styles.noMenuHint}>
+                                          Derzeit kein Menü verfügbar
+                                        </ThemedText>
+                                    )}
+                                  </View>
+                                </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                    )}
+                  </>
+              )}
 
-            <TouchableOpacity style={styles.navButton} onPress={goToNextDay}>
-              <ThemedText style={styles.navButtonText}>Weiter ▶</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </ThemedView>
+              {/* Datum-Navigation */}
+              <View style={styles.dateNavigation}>
+                <TouchableOpacity style={[styles.navButton, { backgroundColor: primaryColor }]} onPress={goToPreviousDay}>
+                  <ThemedText style={[styles.navButtonText, { color: textInverseColor }]}>◀ Zurück</ThemedText>
+                </TouchableOpacity>
 
-        <ThemedView style={styles.content}>
-          {selectedCanteen && (
-            <DailyMenu
-              date={selectedDate}
-              locationId={selectedCanteen.id}
-              locationName={selectedCanteen.fullName}
-            />
-          )}
-        </ThemedView>
-      </ScrollView>
-    </SafeAreaView>
+                <TouchableOpacity style={[styles.todayButton, { borderColor: primaryColor }]} onPress={goToToday}>
+                  <ThemedText style={[styles.todayButtonText, { color: primaryColor }]}>Heute</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.navButton, { backgroundColor: primaryColor }]} onPress={goToNextDay}>
+                  <ThemedText style={[styles.navButtonText, { color: textInverseColor }]}>Weiter ▶</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </ThemedView>
+
+            <ThemedView style={styles.content}>
+              {selectedCanteen && (
+                  <DailyMenu
+                      date={selectedDate}
+                      locationId={selectedCanteen.id}
+                      locationName={selectedCanteen.fullName}
+                  />
+              )}
+            </ThemedView>
+          </ScrollView>
+        </SafeAreaView>
+      </ThemedView>
   );
 }
 
@@ -256,8 +267,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: HTWColors.border,
-    backgroundColor: HTWColors.backgroundCard,
   },
   canteenBtn: {
     marginTop: 4,
@@ -269,7 +278,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   canteenLabel: {
-    color: HTWColors.textLight,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -277,7 +285,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   locationChevron: {
-    color: HTWColors.textLight,
     fontSize: 18,
     marginLeft: 8,
   },
@@ -285,37 +292,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: HTWColors.border,
-    backgroundColor: HTWColors.backgroundCard,
     overflow: 'hidden',
   },
   dropdownItem: {
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: HTWColors.border,
-  },
-  dropdownItemSelected: {
-    backgroundColor: HTWColors.primary + '15',
-  },
-  dropdownItemDisabled: {
-    opacity: 0.6,
-  },
-  selectedText: {
-    color: HTWColors.primary,
-    fontWeight: '600',
-  },
-  disabledText: {
-    color: HTWColors.textLight,
   },
   canteenAddress: {
     fontSize: 12,
-    color: HTWColors.textLight,
     marginTop: 2,
   },
   noMenuHint: {
     fontSize: 11,
-    color: HTWColors.warning,
+    color: '#F59E0B',
     marginTop: 2,
     fontStyle: 'italic',
   },
@@ -333,25 +323,20 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: HTWColors.primary,
     borderRadius: 8,
     alignItems: 'center',
   },
   navButtonText: {
-    color: HTWColors.textInverse,
     fontWeight: '600',
     fontSize: 14,
   },
   todayButton: {
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: HTWColors.backgroundGray,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: HTWColors.primary,
   },
   todayButtonText: {
-    color: HTWColors.primary,
     fontWeight: '600',
     fontSize: 14,
   },

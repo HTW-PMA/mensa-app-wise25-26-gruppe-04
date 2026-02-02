@@ -2,9 +2,13 @@ import { StyleSheet, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { HTWColors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function WaitingTimesScreen() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
+
   // Mock data - später durch echte API-Daten ersetzen
   const waitingTimes = [
     { time: '11:00 - 12:00', status: 'low', minutes: '< 5 Min' },
@@ -16,32 +20,32 @@ export default function WaitingTimesScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'low':
-        return HTWColors.success;
+        return theme.success;
       case 'medium':
-        return HTWColors.warning;
+        return theme.warning;
       case 'high':
-        return HTWColors.error;
+        return theme.error;
       default:
-        return HTWColors.textLight;
+        return theme.textSecondary;
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top']}>
       <ScrollView style={styles.container}>
       <ThemedView style={styles.header}>
         <ThemedText type="title">Wartezeiten</ThemedText>
         <ThemedText>Aktuelle Auslastung der Mensa</ThemedText>
       </ThemedView>
 
-      <ThemedView style={styles.currentStatus}>
+      <View style={[styles.currentStatus, { backgroundColor: theme.backgroundSecondary }]}>
         <ThemedText type="subtitle">Jetzt</ThemedText>
         <View style={styles.statusBadge}>
-          <View style={[styles.statusDot, { backgroundColor: HTWColors.success }]} />
+          <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
           <ThemedText style={styles.statusText}>Geringe Auslastung</ThemedText>
         </View>
-        <ThemedText style={styles.waitTime}>Wartezeit: ca. 5 Minuten</ThemedText>
-      </ThemedView>
+        <ThemedText style={[styles.waitTime, { color: theme.primary }]}>Wartezeit: ca. 5 Minuten</ThemedText>
+      </View>
 
       <ThemedView style={styles.section}>
         <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -49,10 +53,10 @@ export default function WaitingTimesScreen() {
         </ThemedText>
 
         {waitingTimes.map((item, index) => (
-          <View key={index} style={styles.timeSlot}>
+          <View key={index} style={[styles.timeSlot, { borderBottomColor: theme.borderLight }]}>
             <View style={styles.timeInfo}>
               <ThemedText style={styles.timeText}>{item.time}</ThemedText>
-              <ThemedText style={styles.minutesText}>{item.minutes}</ThemedText>
+              <ThemedText style={[styles.minutesText, { color: theme.textSecondary }]}>{item.minutes}</ThemedText>
             </View>
             <View
               style={[
@@ -64,18 +68,18 @@ export default function WaitingTimesScreen() {
         ))}
       </ThemedView>
 
-      <ThemedView style={styles.tips}>
+      <View style={[styles.tips, { backgroundColor: theme.backgroundSecondary }]}>
         <ThemedText type="subtitle">💡 Tipps</ThemedText>
-        <ThemedText style={styles.tipText}>
+        <ThemedText style={[styles.tipText, { color: theme.textSecondary }]}>
           • Beste Zeit: 11:00-11:30 Uhr oder nach 13:30 Uhr
         </ThemedText>
-        <ThemedText style={styles.tipText}>
+        <ThemedText style={[styles.tipText, { color: theme.textSecondary }]}>
           • Stoßzeit: 12:00-13:00 Uhr (Hauptvorlesungsende)
         </ThemedText>
-        <ThemedText style={styles.tipText}>
+        <ThemedText style={[styles.tipText, { color: theme.textSecondary }]}>
           • Vorbestellung über die App spart Zeit
         </ThemedText>
-      </ThemedView>
+      </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -97,7 +101,6 @@ const styles = StyleSheet.create({
     padding: 20,
     margin: 16,
     borderRadius: 12,
-    backgroundColor: HTWColors.backgroundGray,
     gap: 12,
   },
   statusBadge: {
@@ -117,7 +120,6 @@ const styles = StyleSheet.create({
   waitTime: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: HTWColors.primary,
   },
   section: {
     padding: 20,
@@ -131,7 +133,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: HTWColors.borderLight,
   },
   timeInfo: {
     flex: 1,
@@ -142,7 +143,6 @@ const styles = StyleSheet.create({
   },
   minutesText: {
     fontSize: 14,
-    opacity: 0.6,
     marginTop: 4,
   },
   statusBar: {
@@ -154,12 +154,10 @@ const styles = StyleSheet.create({
     padding: 20,
     margin: 16,
     borderRadius: 12,
-    backgroundColor: HTWColors.backgroundGray,
     gap: 12,
   },
   tipText: {
     fontSize: 14,
     lineHeight: 20,
-    opacity: 0.8,
   },
 });

@@ -6,6 +6,7 @@ import { IconSymbol } from './ui/icon-symbol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 const FAVORITES_STORAGE_KEY = '@mensa_app_favorites';
 
@@ -18,6 +19,11 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
+
+  const surfaceColor = useThemeColor({}, 'surface');
+  const textSecondaryColor = useThemeColor({}, 'textSecondary');
+  const primaryColor = useThemeColor({}, 'primary');
+  const labelBgColor = useThemeColor({ light: '#F2F3F5', dark: '#2C2C2E' }, 'background');
 
   const getLabelIcon = (label: DishLabel) => {
     switch (label) {
@@ -74,11 +80,11 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
 
   if (!available) {
     return (
-        <View style={[styles.card, styles.unavailableCard]}>
+        <View style={[styles.card, styles.unavailableCard, { backgroundColor: surfaceColor }]}>
           <ThemedText style={styles.name} type="subtitle">
             {name}
           </ThemedText>
-          <ThemedText style={styles.unavailableText}>
+          <ThemedText style={[styles.unavailableText, { color: textSecondaryColor }]}>
             {category} – Derzeit nicht verfügbar
           </ThemedText>
         </View>
@@ -86,7 +92,7 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
   }
 
   return (
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: surfaceColor }]}>
         <View style={styles.header}>
           <ThemedText style={styles.name} type="subtitle">
             {name}
@@ -94,16 +100,16 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
           <View style={styles.headerRight}>
             <View style={styles.pricesBlock}>
               <View style={styles.priceContainer}>
-                <ThemedText style={styles.priceLabel}>Studierende</ThemedText>
-                <ThemedText style={styles.priceValue}>{formatPrice(price.student)}</ThemedText>
+                <ThemedText style={[styles.priceLabel, { color: textSecondaryColor }]}>Studierende</ThemedText>
+                <ThemedText style={[styles.priceValue, { color: primaryColor }]}>{formatPrice(price.student)}</ThemedText>
               </View>
               <View style={styles.priceContainer}>
-                <ThemedText style={styles.priceLabel}>Angestellte</ThemedText>
-                <ThemedText style={styles.priceValue}>{formatPrice(price.employee)}</ThemedText>
+                <ThemedText style={[styles.priceLabel, { color: textSecondaryColor }]}>Angestellte</ThemedText>
+                <ThemedText style={[styles.priceValue, { color: primaryColor }]}>{formatPrice(price.employee)}</ThemedText>
               </View>
               <View style={styles.priceContainer}>
-                <ThemedText style={styles.priceLabel}>Gäste</ThemedText>
-                <ThemedText style={styles.priceValue}>{formatPrice(price.guest)}</ThemedText>
+                <ThemedText style={[styles.priceLabel, { color: textSecondaryColor }]}>Gäste</ThemedText>
+                <ThemedText style={[styles.priceValue, { color: primaryColor }]}>{formatPrice(price.guest)}</ThemedText>
               </View>
             </View>
             <TouchableOpacity onPress={toggleFavorite} style={styles.favoriteButton}>
@@ -117,7 +123,7 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
         </View>
 
         {description && (
-            <ThemedText style={styles.description}>{description}</ThemedText>
+            <ThemedText style={[styles.description, { color: textSecondaryColor }]}>{description}</ThemedText>
         )}
 
         <View style={styles.footer}>
@@ -125,7 +131,7 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
             {labels?.map((label) => {
               const { name: iconName, color } = getLabelIcon(label);
               return (
-                  <View key={label} style={styles.label}>
+                  <View key={label} style={[styles.label, { backgroundColor: labelBgColor }]}>
                     <IconSymbol name={iconName as any} size={14} color={color} />
                     <ThemedText style={[styles.labelText, { color }]}>
                       {label.replace('_', ' ')}
@@ -134,7 +140,7 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
               );
             })}
           </View>
-          <ThemedText style={styles.categoryText}>
+          <ThemedText style={[styles.categoryText, { color: textSecondaryColor }]}>
             {category.replace('_', ' ')}
           </ThemedText>
         </View>
@@ -144,7 +150,6 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 18,
     shadowColor: '#000',
@@ -152,6 +157,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
     gap: 8,
+    marginBottom: 12,
   },
   unavailableCard: {
     opacity: 0.6,
@@ -160,7 +166,6 @@ const styles = StyleSheet.create({
   },
   unavailableText: {
     fontStyle: 'italic',
-    color: '#6B7280',
   },
   header: {
     flexDirection: 'row',
@@ -189,17 +194,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   priceLabel: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 10,
   },
   priceValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
-    color: '#0A2540',
   },
   description: {
     fontSize: 14,
-    color: '#6B7280',
     lineHeight: 20,
   },
   footer: {
@@ -216,7 +218,6 @@ const styles = StyleSheet.create({
   label: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F3F5',
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 3,
@@ -228,7 +229,6 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#6B7280',
     textTransform: 'capitalize',
   },
 });
