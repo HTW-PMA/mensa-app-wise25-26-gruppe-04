@@ -408,6 +408,13 @@ export class MensaApiService {
             labels: MensaApiService.mapBadges(meal.badges),
             imageUrl: undefined,
             available: true,
+            sustainability:
+                meal.co2Bilanz != null || meal.waterBilanz != null
+                    ? {
+                          co2Bilanz: meal.co2Bilanz,
+                          waterBilanz: meal.waterBilanz,
+                      }
+                    : undefined,
         };
     }
 

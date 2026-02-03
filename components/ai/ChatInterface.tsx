@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View, TextInput, Pressable, FlatList } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { HTWColors } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 interface Message {
   id: string;
@@ -24,6 +24,11 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const primaryColor = useThemeColor({}, 'primary');
+  const surfaceColor = useThemeColor({}, 'surface');
+  const borderColor = useThemeColor({}, 'border');
+  const textColor = useThemeColor({}, 'text');
+  const textSecondaryColor = useThemeColor({}, 'textSecondary');
 
   const handleSend = async () => {
     if (!inputText.trim() || isLoading) return;
@@ -61,11 +66,13 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
     <View
       style={[
         styles.messageContainer,
-        item.sender === 'user' ? styles.userMessage : styles.aiMessage,
+        item.sender === 'user'
+          ? [styles.userMessage, { backgroundColor: primaryColor }]
+          : [styles.aiMessage, { backgroundColor: surfaceColor }],
       ]}
     >
-      <ThemedText style={styles.messageText}>{item.text}</ThemedText>
-      <ThemedText style={styles.timestamp}>
+      <ThemedText style={[styles.messageText, item.sender === 'user' ? { color: '#fff' } : { color: textColor }]}>{item.text}</ThemedText>
+      <ThemedText style={[styles.timestamp, item.sender === 'user' ? { color: 'rgba(255,255,255,0.7)' } : { color: textSecondaryColor }]}>
         {item.timestamp.toLocaleTimeString('de-DE', {
           hour: '2-digit',
           minute: '2-digit',
@@ -84,18 +91,18 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
         contentContainerStyle={styles.messageListContent}
       />
 
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { borderTopColor: borderColor }]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: surfaceColor, color: textColor }]}
           value={inputText}
           onChangeText={setInputText}
           placeholder="Nachricht eingeben..."
-          placeholderTextColor="#999"
+          placeholderTextColor={textSecondaryColor}
           multiline
           maxLength={500}
         />
         <Pressable
-          style={[styles.sendButton, isLoading && styles.sendButtonDisabled]}
+          style={[styles.sendButton, { backgroundColor: primaryColor }, isLoading && styles.sendButtonDisabled]}
           onPress={handleSend}
           disabled={isLoading}
         >
@@ -126,11 +133,9 @@ const styles = StyleSheet.create({
   },
   userMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: HTWColors.primary,
   },
   aiMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: HTWColors.backgroundGray,
   },
   messageText: {
     fontSize: 16,
@@ -144,12 +149,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: HTWColors.border,
     alignItems: 'flex-end',
   },
   input: {
     flex: 1,
-    backgroundColor: HTWColors.backgroundGray,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -158,7 +161,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   sendButton: {
-    backgroundColor: HTWColors.primary,
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,

@@ -6,7 +6,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { HTWColors } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 export enum SustainabilityLevel {
   HIGH = 'high',
@@ -27,14 +27,19 @@ interface SustainabilityBadgeProps {
 }
 
 export function SustainabilityBadge({ info }: SustainabilityBadgeProps) {
+  const successColor = useThemeColor({}, 'success');
+  const warningColor = useThemeColor({}, 'warning');
+  const errorColor = useThemeColor({}, 'error');
+  const surfaceColor = useThemeColor({}, 'surface');
+
   const getLevelColor = (level: SustainabilityLevel) => {
     switch (level) {
       case SustainabilityLevel.HIGH:
-        return HTWColors.success;
+        return successColor;
       case SustainabilityLevel.MEDIUM:
-        return HTWColors.warning;
+        return warningColor;
       case SustainabilityLevel.LOW:
-        return HTWColors.error;
+        return errorColor;
     }
   };
 
@@ -64,28 +69,28 @@ export function SustainabilityBadge({ info }: SustainabilityBadgeProps) {
 
       <View style={styles.attributesContainer}>
         {info.regional && (
-          <View style={styles.attribute}>
+          <View style={[styles.attribute, { backgroundColor: surfaceColor }]}>
             <ThemedText style={styles.attributeIcon}>🏞️</ThemedText>
             <ThemedText style={styles.attributeText}>Regional</ThemedText>
           </View>
         )}
 
         {info.organic && (
-          <View style={styles.attribute}>
+          <View style={[styles.attribute, { backgroundColor: surfaceColor }]}>
             <ThemedText style={styles.attributeIcon}>🌾</ThemedText>
             <ThemedText style={styles.attributeText}>Bio</ThemedText>
           </View>
         )}
 
         {info.fairTrade && (
-          <View style={styles.attribute}>
+          <View style={[styles.attribute, { backgroundColor: surfaceColor }]}>
             <ThemedText style={styles.attributeIcon}>🤝</ThemedText>
             <ThemedText style={styles.attributeText}>Fair Trade</ThemedText>
           </View>
         )}
 
         {info.co2Score !== undefined && (
-          <View style={styles.attribute}>
+          <View style={[styles.attribute, { backgroundColor: surfaceColor }]}>
             <ThemedText style={styles.attributeIcon}>🌍</ThemedText>
             <ThemedText style={styles.attributeText}>
               CO₂: {info.co2Score}g
@@ -109,7 +114,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   levelText: {
-    color: HTWColors.textInverse,
+    color: '#fff',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -124,7 +129,6 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: HTWColors.backgroundGray,
     borderRadius: 12,
   },
   attributeIcon: {

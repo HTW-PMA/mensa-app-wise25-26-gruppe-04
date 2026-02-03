@@ -7,7 +7,7 @@ import React from 'react';
 import { StyleSheet, View, Pressable } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { HTWColors } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 interface Rating {
   id: string;
@@ -23,19 +23,23 @@ interface RatingCardProps {
 }
 
 export function RatingCard({ rating }: RatingCardProps) {
+  const primaryColor = useThemeColor({}, 'primary');
+  const borderColor = useThemeColor({}, 'border');
+  const warningColor = useThemeColor({}, 'warning');
+
   const renderStars = (count: number) => {
     return Array.from({ length: 5 }, (_, index) => (
-      <ThemedText key={index} style={styles.star}>
-        {index < count ? '★' : '☆'}
+      <ThemedText key={index} style={[styles.star, { color: warningColor }]}>
+        {index < count ? '\u2605' : '\u2606'}
       </ThemedText>
     ));
   };
 
   return (
-    <ThemedView style={styles.card}>
+    <ThemedView style={[styles.card, { borderColor }]}>
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <View style={styles.avatar}>
+          <View style={[styles.avatar, { backgroundColor: primaryColor }]}>
             <ThemedText style={styles.avatarText}>
               {rating.userName.charAt(0).toUpperCase()}
             </ThemedText>
@@ -68,17 +72,19 @@ export function RatingSummary({
   totalRatings,
   onPress,
 }: RatingSummaryProps) {
+  const warningColor = useThemeColor({}, 'warning');
+
   const renderStars = (count: number) => {
     const fullStars = Math.floor(count);
     const hasHalfStar = count % 1 >= 0.5;
 
     return Array.from({ length: 5 }, (_, index) => {
       if (index < fullStars) {
-        return <ThemedText key={index} style={styles.star}>★</ThemedText>;
+        return <ThemedText key={index} style={[styles.star, { color: warningColor }]}>{'\u2605'}</ThemedText>;
       } else if (index === fullStars && hasHalfStar) {
-        return <ThemedText key={index} style={styles.star}>⯨</ThemedText>;
+        return <ThemedText key={index} style={[styles.star, { color: warningColor }]}>{'\u2BE8'}</ThemedText>;
       } else {
-        return <ThemedText key={index} style={styles.star}>☆</ThemedText>;
+        return <ThemedText key={index} style={[styles.star, { color: warningColor }]}>{'\u2606'}</ThemedText>;
       }
     });
   };
@@ -101,7 +107,6 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: HTWColors.border,
   },
   header: {
     flexDirection: 'row',
@@ -118,12 +123,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: HTWColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    color: HTWColors.textInverse,
+    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -142,7 +146,6 @@ const styles = StyleSheet.create({
   },
   star: {
     fontSize: 18,
-    color: HTWColors.warning,
   },
   comment: {
     fontSize: 14,

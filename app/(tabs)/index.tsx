@@ -143,7 +143,6 @@ export default function HomeScreen() {
               { title: 'Tagesmenü', sub: 'Alle Gerichte mit Nährwerten und Allergenen', icon: 'fork.knife', route: '/(tabs)/menu' },
               { title: 'KI-Assistent', sub: 'Personalisierte Empfehlungen', icon: 'sparkles', route: '/(tabs)/ai-assistant' },
               { title: 'Wartezeiten', sub: 'Live-Auslastung der Mensen', icon: 'clock.fill', route: '/(tabs)/waiting-times' },
-              { title: 'Nachhaltigkeit', sub: 'CO₂-Bilanz und Herkunft', icon: 'leaf.fill', route: '/(tabs)/menu' },
             ] as const).map((item) => (
                 <TouchableOpacity
                     key={item.title}
@@ -167,7 +166,7 @@ export default function HomeScreen() {
                   </ThemedText>
               )}
               <ThemedText style={[styles.footerSmall, { color: textSecondaryColor }]}>
-                UniMensa Berlin · Gruppe 04 · {selectedUniversity.id.toUpperCase()} · WiSe 25/26
+                Designed & Created by UniMensa Berlin · Gruppe 04 · HTW · WiSe 25/26
               </ThemedText>
             </View>
           </ScrollView>

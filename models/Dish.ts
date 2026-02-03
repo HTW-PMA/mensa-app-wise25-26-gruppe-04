@@ -18,6 +18,12 @@ export interface Dish {
   labels?: DishLabel[];
   imageUrl?: string;
   available: boolean;
+  sustainability?: SustainabilityData;
+}
+
+export interface SustainabilityData {
+  co2Bilanz?: number;
+  waterBilanz?: number;
 }
 
 export enum DishCategory {

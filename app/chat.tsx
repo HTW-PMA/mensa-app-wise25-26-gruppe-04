@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, Button, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, TextInput, Button, FlatList, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { answerMensaQuestion } from '../services/ai/aiService';
+import { ThemedText } from '@/components/themed-text';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 // Define the message structure
 interface Message {
@@ -13,6 +15,12 @@ export default function ChatScreen() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const backgroundColor = useThemeColor({}, 'background');
+    const surfaceColor = useThemeColor({}, 'surface');
+    const borderColor = useThemeColor({}, 'border');
+    const textColor = useThemeColor({}, 'text');
+    const textSecondaryColor = useThemeColor({}, 'textSecondary');
+    const primaryColor = useThemeColor({}, 'primary');
 
     const handleSend = useCallback(async () => {
         if (input.trim() === '') return;
@@ -50,14 +58,14 @@ export default function ChatScreen() {
     }, [input, messages]);
 
     const renderItem = ({ item }: { item: Message }) => (
-        <View style={[styles.messageContainer, item.role === 'user' ? styles.userMessage : styles.assistantMessage]}>
-    <Text style={styles.messageText}>{item.content}</Text>
+        <View style={[styles.messageContainer, item.role === 'user' ? { ...styles.userMessage, backgroundColor: primaryColor } : { ...styles.assistantMessage, backgroundColor: surfaceColor }]}>
+    <ThemedText style={[styles.messageText, item.role === 'user' ? { color: '#fff' } : { color: textColor }]}>{item.content}</ThemedText>
         </View>
 );
 
     return (
         <KeyboardAvoidingView
-            style={styles.container}
+            style={[styles.container, { backgroundColor }]}
     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
@@ -70,19 +78,19 @@ export default function ChatScreen() {
     />
 
     {isLoading && (
-        <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color="#007AFF" />
-    <Text style={styles.loadingText}>Mensa-Bot antwortet...</Text>
+        <View style={[styles.loadingContainer, { backgroundColor: surfaceColor }]}>
+        <ActivityIndicator size="small" color={primaryColor} />
+    <ThemedText style={[styles.loadingText, { color: textSecondaryColor }]}>Mensa-Bot antwortet...</ThemedText>
     </View>
     )}
 
-    <View style={styles.inputContainer}>
+    <View style={[styles.inputContainer, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
     <TextInput
-        style={styles.input}
+        style={[styles.input, { borderColor, color: textColor }]}
     value={input}
     onChangeText={setInput}
     placeholder="Frage den Mensa-Bot..."
-    placeholderTextColor="#999"
+    placeholderTextColor={textSecondaryColor}
     onSubmitEditing={handleSend}
     returnKeyType="send"
     editable={!isLoading}
@@ -96,7 +104,6 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f0f0f0',
     },
     chatList: {
         flex: 1,
@@ -113,29 +120,24 @@ const styles = StyleSheet.create({
     },
     userMessage: {
         alignSelf: 'flex-end',
-        backgroundColor: '#007AFF',
         borderBottomRightRadius: 5,
     },
     assistantMessage: {
         alignSelf: 'flex-start',
-        backgroundColor: '#fff',
         borderBottomLeftRadius: 5,
     },
     messageText: {
-        color: '#000',
+        fontSize: 16,
     },
     inputContainer: {
         flexDirection: 'row',
         padding: 10,
-        backgroundColor: '#fff',
         borderTopWidth: 1,
-        borderTopColor: '#ccc',
         alignItems: 'center',
     },
     input: {
         flex: 1,
         borderWidth: 1,
-        borderColor: '#ccc',
         borderRadius: 20,
         paddingHorizontal: 15,
         paddingVertical: 8,
@@ -146,10 +148,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         padding: 10,
-        backgroundColor: '#e0e0e0',
     },
     loadingText: {
         marginLeft: 10,
-        color: '#555',
     },
 });

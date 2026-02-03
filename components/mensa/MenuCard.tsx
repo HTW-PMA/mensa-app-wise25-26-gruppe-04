@@ -4,11 +4,11 @@
  */
 
 import React from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { StyleSheet, View, Pressable } from 'react-native';
 import { Dish, DishLabel } from '@/models/Dish';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { HTWColors } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 interface MenuCardProps {
   dish: Dish;
@@ -16,6 +16,8 @@ interface MenuCardProps {
 }
 
 export function MenuCard({ dish, onPress }: MenuCardProps) {
+  const primaryColor = useThemeColor({}, 'primary');
+
   const formatPrice = (price: number) => {
     return (price / 100).toFixed(2).replace('.', ',') + ' €';
   };
@@ -52,8 +54,8 @@ export function MenuCard({ dish, onPress }: MenuCardProps) {
         {dish.labels && dish.labels.length > 0 && (
           <View style={styles.labelsContainer}>
             {dish.labels.map((label: DishLabel) => (
-              <View key={label} style={styles.label}>
-                <Text style={styles.labelText}>{label}</Text>
+              <View key={label} style={[styles.label, { backgroundColor: primaryColor }]}>
+                <ThemedText style={styles.labelText}>{label}</ThemedText>
               </View>
             ))}
           </View>
@@ -129,7 +131,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   label: {
-    backgroundColor: HTWColors.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -137,6 +138,7 @@ const styles = StyleSheet.create({
   labelText: {
     color: '#fff',
     fontSize: 12,
+    fontWeight: '500',
   },
   nutritionContainer: {
     flexDirection: 'row',

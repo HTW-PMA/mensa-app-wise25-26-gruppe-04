@@ -19,6 +19,16 @@ const MAPPING: Partial<Record<SymbolViewProps['name'], MaterialIconName>> = {
     'heart.fill': 'favorite',
     'heart': 'favorite-border',
     'gearshape.fill': 'settings',
+
+    // Sustainability & Info icons:
+    'leaf.fill': 'eco',
+    'drop.fill': 'water-drop',
+    'lightbulb.fill': 'lightbulb',
+    'info.circle.fill': 'info',
+    'arrow.up.right': 'north-east',
+    'exclamationmark.triangle.fill': 'warning',
+    'checkmark.seal.fill': 'verified',
+    'globe.europe.africa.fill': 'public',
 };
 
 export function IconSymbol({
