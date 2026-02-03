@@ -240,13 +240,6 @@ export const UNIVERSITIES: University[] = [
         "hasMenu": true
       },
       {
-        "id": "655ff175136d3b580c970f83",
-        "name": "HU Süd",
-        "fullName": "Mensa HU Süd",
-        "address": "Unter den Linden 6, 10117",
-        "hasMenu": true
-      },
-      {
         "id": "655ff175136d3b580c970f84",
         "name": "Charité Zahnklinik",
         "fullName": "Mensa-Späti Charité Zahnklinik",
@@ -394,6 +387,19 @@ export const UNIVERSITIES: University[] = [
         "hasMenu": true
       }
     ]
+  },
+  {
+    "id": "hsap",
+    "name": "Hochschule für Soziale Arbeit und Pädagogik",
+    "canteens": [
+      {
+        "id": "655ff175136d3b580c970f81",
+        "name": "HTW Wilhelminenhof",
+        "fullName": "Mensa HTW Wilhelminenhof",
+        "address": "Wilhelminenhofstraße 75 A, (Gebäude G)",
+        "hasMenu": false
+      }
+    ]
   }
 ];
 
@@ -404,11 +410,12 @@ export const UNIVERSITIES: University[] = [
 // Humboldt-Universität zu Berlin: 7 Mensen
 // Freie Universität Berlin: 8 Mensen
 // Technische Universität Berlin: 6 Mensen
-// Charité - Universitätsmedizin Berlin: 3 Mensen
+// Charité - Universitätsmedizin Berlin: 2 Mensen (korrigiert - HU Süd entfernt)
 // Berliner Hochschule für Technik: 3 Mensen
 // Alice Salomon Hochschule Berlin: 1 Mensen
-// Universität der Künste Berlin: 5 Mensen
+// Universität der Künste Berlin: 5 Mensen (teilt Mensen mit TU Berlin)
 // Weißensee Kunsthochschule Berlin: 1 Mensen
 // Evangelische Hochschule Berlin: 2 Mensen
 // Katholische Hochschule für Sozialwesen Berlin: 1 Mensen
 // Hochschule für Schauspielkunst Ernst Busch: 1 Mensen
+// Hochschule für Soziale Arbeit und Pädagogik: 1 Mensen (neu hinzugefügt)

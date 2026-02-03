@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MensaApiService } from '../api/mensaApi';
 import { Dish } from '@/models/Dish';
+import { API_CONFIG } from '@/config/api.config';
 
-// API Configuration - HARDCODED (da .env in React Native nicht zuverlässig funktioniert)
-const OPENAI_API_KEY = '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';
-const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
-const MODEL_NAME = 'gpt-4o-mini';
+// API Configuration - Loaded from environment variables
+const OPENAI_API_KEY = API_CONFIG.AI_API.API_KEY;
+const OPENAI_ENDPOINT = `${API_CONFIG.AI_API.BASE_URL}/chat/completions`;
+const MODEL_NAME = API_CONFIG.AI_API.MODEL;
 
 const STORAGE_KEY = '@mensa_app_preferences';
 const FAVORITES_STORAGE_KEY = '@mensa_app_favorites';
@@ -20,7 +21,7 @@ export async function getAiResponse(
     functions?: any[]
 ): Promise<string> {
     if (!OPENAI_API_KEY || OPENAI_API_KEY.length < 20) {
-        return 'Bitte setze deinen OpenAI API-Key in services/ai/aiService.ts';
+        return 'Bitte setze deinen OpenAI API-Key in der .env Datei (EXPO_PUBLIC_OPENAI_API_KEY)';
     }
 
     try {

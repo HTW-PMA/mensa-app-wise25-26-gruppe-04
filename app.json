@@ -26,6 +26,7 @@
       "EXPO_PUBLIC_MENSA_API_URL": "https://mensa.gregorflachs.de/api/v1",
       "EXPO_PUBLIC_MENSA_API_KEY": "lylDptJVKMnASYr0Equ4Wk3lAtHdSmKBcuVHRL5h3Czlj6/BllEEo58Imkbj5M3f+wJwbnkLTMEEM/UHsRlPUSfCMfaf8Bi0zGYzuIAWbGnUtJNFs3f9j1LvJzJy6x+bNuvMqi5h632L2MdJ81NXnfnb1gI12bKtKxLqFTNAHmHLiEx72uh0uATs0xyrewHOujMv9JFIqfdjFIi3YCT0+6zMmkS6pedLvilyMJLy9f/BCMd2Ow7+3rEMbXjuLMJ6lXGofPbt3S1KILzZ7XrxVCxNpye9WSCj1KQdjceLyjX1CPqbXhiexhoTo3lcgQsCTy9S11G5NuAvgtrSMYx4hg==",
       "EXPO_PUBLIC_MENSA_CANTEEN_ID": "",
+      "EXPO_PUBLIC_OPENAI_API_KEY": "",
       "eas": { "projectId": "3e9f4af8-8657-4562-8f7a-e85a5cd12397" }
     },
     "plugins": [
