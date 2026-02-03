@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Dish, DishLabel } from '@/models/Dish';
+import { Dish, DishLabel, Allergen } from '@/models/Dish';
 import { ThemedText } from './themed-text';
 import { IconSymbol } from './ui/icon-symbol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,7 +15,7 @@ interface DishCardProps {
 }
 
 export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
-  const { name, description, price, labels, category, available } = dish;
+  const { name, description, price, labels, category, available, allergens } = dish;
   const [isFavorite, setIsFavorite] = useState(false);
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
@@ -23,7 +23,10 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
   const surfaceColor = useThemeColor({}, 'surface');
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
   const primaryColor = useThemeColor({}, 'primary');
+  const errorColor = useThemeColor({}, 'error');
+  const warningColor = useThemeColor({ light: '#F59E0B', dark: '#FBBF24' }, 'warning');
   const labelBgColor = useThemeColor({ light: '#F2F3F5', dark: '#2C2C2E' }, 'background');
+  const allergenBgColor = useThemeColor({ light: '#FEF2F2', dark: '#3F1F1F' }, 'background');
 
   const getLabelIcon = (label: DishLabel) => {
     switch (label) {
@@ -38,6 +41,26 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
       default:
         return { name: 'tag.fill', color: theme.text };
     }
+  };
+
+  const getAllergenLabel = (allergen: Allergen): string => {
+    const labels: Record<Allergen, string> = {
+      [Allergen.GLUTEN]: 'Gluten',
+      [Allergen.CRUSTACEANS]: 'Krebstiere',
+      [Allergen.EGGS]: 'Eier',
+      [Allergen.FISH]: 'Fisch',
+      [Allergen.PEANUTS]: 'Erdnüsse',
+      [Allergen.SOYBEANS]: 'Soja',
+      [Allergen.MILK]: 'Milch',
+      [Allergen.NUTS]: 'Nüsse',
+      [Allergen.CELERY]: 'Sellerie',
+      [Allergen.MUSTARD]: 'Senf',
+      [Allergen.SESAME]: 'Sesam',
+      [Allergen.SULPHITES]: 'Sulfite',
+      [Allergen.LUPIN]: 'Lupine',
+      [Allergen.MOLLUSCS]: 'Weichtiere',
+    };
+    return labels[allergen] || allergen;
   };
 
   const formatPrice = (price: number) => {
@@ -124,6 +147,22 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
 
         {description && (
             <ThemedText style={[styles.description, { color: textSecondaryColor }]}>{description}</ThemedText>
+        )}
+
+        {allergens && allergens.length > 0 && (
+          <View style={[styles.allergensContainer, { backgroundColor: allergenBgColor }]}>
+            <View style={styles.allergenHeader}>
+              <IconSymbol name="exclamationmark.triangle.fill" size={14} color={errorColor} />
+              <ThemedText style={[styles.allergenTitle, { color: errorColor }]}>Allergene:</ThemedText>
+            </View>
+            <View style={styles.allergensList}>
+              {allergens.map((allergen, index) => (
+                <ThemedText key={allergen} style={[styles.allergenText, { color: errorColor }]}>
+                  {getAllergenLabel(allergen)}{index < allergens.length - 1 ? ', ' : ''}
+                </ThemedText>
+              ))}
+            </View>
+          </View>
         )}
 
         <View style={styles.footer}>
@@ -230,5 +269,30 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 12,
     textTransform: 'capitalize',
+  },
+  allergensContainer: {
+    padding: 10,
+    borderRadius: 10,
+    marginTop: 4,
+    borderLeftWidth: 3,
+    borderLeftColor: '#EF4444',
+  },
+  allergenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  allergenTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  allergensList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  allergenText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

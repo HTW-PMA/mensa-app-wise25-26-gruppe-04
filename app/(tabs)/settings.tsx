@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { UniColors } from '@/constants/theme';
+import { sendTestNotification, registerForPushNotificationsAsync } from '@/services/notifications/notificationService';
 
 const STORAGE_KEY = '@mensa_app_preferences';
 
@@ -102,8 +103,29 @@ export default function SettingsScreen() {
     savePreferences({ ...preferences, allergens: updated });
   };
 
-  const toggleNotifications = () => {
-    savePreferences({ ...preferences, notificationsEnabled: !preferences.notificationsEnabled });
+  const toggleNotifications = async () => {
+    const newValue = !preferences.notificationsEnabled;
+    
+    if (newValue) {
+      // Request permissions when enabling notifications
+      const token = await registerForPushNotificationsAsync();
+      if (!token) {
+        Alert.alert('Fehler', 'Benachrichtigungen konnten nicht aktiviert werden.');
+        return;
+      }
+    }
+    
+    savePreferences({ ...preferences, notificationsEnabled: newValue });
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      await sendTestNotification();
+      Alert.alert('Erfolg', 'Test-Benachrichtigung wurde gesendet!');
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      Alert.alert('Fehler', 'Test-Benachrichtigung konnte nicht gesendet werden.');
+    }
   };
 
   const resetPreferences = () => {
@@ -204,6 +226,16 @@ export default function SettingsScreen() {
                     thumbColor="#fff"
                 />
               </View>
+              {preferences.notificationsEnabled && (
+                <TouchableOpacity 
+                  style={[styles.testButton, { backgroundColor: primaryColor }]} 
+                  onPress={handleTestNotification}
+                >
+                  <ThemedText style={styles.testButtonText}>
+                    🔔 Test-Benachrichtigung senden
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
             </ThemedView>
 
             {/* Summary */}
@@ -304,6 +336,17 @@ const styles = StyleSheet.create({
   resetButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  testButton: {
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
   },
 });

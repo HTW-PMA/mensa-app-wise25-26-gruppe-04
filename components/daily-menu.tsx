@@ -5,6 +5,8 @@ import { HTWColors } from '@/constants/theme';
 import { useMenuData } from '@/hooks/useMenuData';
 import { MenuSection } from './menu-section';
 import { Menu } from "@/models/Menu";
+import { IconSymbol } from './ui/icon-symbol';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 interface DailyMenuProps {
   date: Date;
@@ -21,7 +23,12 @@ const formatDate = (date: Date) => {
 };
 
 export const DailyMenu: React.FC<DailyMenuProps> = ({ date, locationId, locationName }) => {
-  const { menu, loading, error } = useMenuData(date, locationId);
+  const { menu, loading, error, source } = useMenuData(date, locationId);
+  
+  const warningColor = useThemeColor({ light: '#F59E0B', dark: '#FBBF24' }, 'warning');
+  const successColor = useThemeColor({}, 'success');
+  const infoBgColor = useThemeColor({ light: '#FEF3C7', dark: '#3F2F1F' }, 'background');
+  const cacheBgColor = useThemeColor({ light: '#E0F2FE', dark: '#1E3A4F' }, 'background');
 
   if (loading) {
     return (
@@ -33,18 +40,25 @@ export const DailyMenu: React.FC<DailyMenuProps> = ({ date, locationId, location
   }
 
   if (error) {
+    // Check if error is due to network issue (no cache available)
+    const isOfflineError = error.message.toLowerCase().includes('network') || 
+                          error.message.toLowerCase().includes('internet') ||
+                          error.message.toLowerCase().includes('connection');
+    
     return (
       <View style={styles.centered}>
-        <ThemedText type="subtitle" style={styles.errorTitle}>
-          Fehler beim Laden des Menüs
-        </ThemedText>
-        <ThemedText style={styles.errorText}>
-          {error.message}
-        </ThemedText>
-        <ThemedText style={styles.errorText}>
-          Bitte überprüfe deine Internetverbindung und den API-Schlüssel.
-        </ThemedText>
-        {/* A simple refresh button could be added here */}
+        <View style={[styles.offlineWarning, { backgroundColor: infoBgColor }]}>
+          <IconSymbol name="wifi.slash" size={48} color={warningColor} />
+          <ThemedText type="subtitle" style={[styles.errorTitle, { color: warningColor }]}>
+            {isOfflineError ? 'Keine Internetverbindung' : 'Fehler beim Laden des Menüs'}
+          </ThemedText>
+          <ThemedText style={styles.errorText}>
+            {isOfflineError 
+              ? 'Die Menüdaten für diese Mensa wurden noch nicht gecached. Bitte stelle eine Internetverbindung her, um die Daten zu laden.'
+              : error.message
+            }
+          </ThemedText>
+        </View>
       </View>
     );
   }
@@ -99,6 +113,16 @@ export const DailyMenu: React.FC<DailyMenuProps> = ({ date, locationId, location
       {locationName ? (
         <ThemedText style={styles.locationText}>{locationName}</ThemedText>
       ) : null}
+      
+      {source === 'cache' && (
+        <View style={[styles.cacheInfo, { backgroundColor: cacheBgColor }]}>
+          <IconSymbol name="arrow.clockwise" size={16} color={successColor} />
+          <ThemedText style={[styles.cacheInfoText, { color: successColor }]}>
+            Offline-Modus: Daten aus dem Cache geladen
+          </ThemedText>
+        </View>
+      )}
+      
       {dailyMenus.map((m) => (
         <MenuSection key={m.id} menu={m} />
       ))}
@@ -147,5 +171,28 @@ const styles = StyleSheet.create({
     marginTop: -14,
     marginBottom: 14,
     color: HTWColors.textLight,
+  },
+  offlineWarning: {
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    gap: 12,
+    maxWidth: 400,
+  },
+  cacheInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: HTWColors.success,
+  },
+  cacheInfoText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
