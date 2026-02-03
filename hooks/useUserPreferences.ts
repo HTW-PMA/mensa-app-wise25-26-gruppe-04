@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = '@mensa_app_preferences';
@@ -42,13 +42,20 @@ export const ALLERGEN_LABELS: Record<string, string> = {
   sulfites: 'Sulfite',
 };
 
+// Simple event emitter so settings changes propagate to all consumers
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+export function notifyPreferencesChanged(): void {
+  listeners.forEach((fn) => fn());
+}
+
 export function useUserPreferences(): UserPrefsData {
   const [prefs, setPrefs] = useState<UserPrefsData>(EMPTY);
 
-  useEffect(() => {
-    let mounted = true;
+  const load = useCallback(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
-      if (raw && mounted) {
+      if (raw) {
         try {
           const parsed = JSON.parse(raw);
           setPrefs({
@@ -58,10 +65,17 @@ export function useUserPreferences(): UserPrefsData {
         } catch {
           // ignore parse errors
         }
+      } else {
+        setPrefs(EMPTY);
       }
     });
-    return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    load();
+    listeners.add(load);
+    return () => { listeners.delete(load); };
+  }, [load]);
 
   return prefs;
 }

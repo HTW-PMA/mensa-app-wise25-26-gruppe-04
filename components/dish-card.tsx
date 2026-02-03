@@ -13,6 +13,17 @@ import { useUserPreferences, ALLERGEN_ID_MAP, ALLERGEN_LABELS } from '@/hooks/us
 
 const FAVORITES_STORAGE_KEY = '@mensa_app_favorites';
 
+// Event emitter for favorites changes
+type FavListener = () => void;
+const favListeners = new Set<FavListener>();
+export function onFavoritesChanged(fn: FavListener): () => void {
+  favListeners.add(fn);
+  return () => { favListeners.delete(fn); };
+}
+function emitFavoritesChanged() {
+  favListeners.forEach((fn) => fn());
+}
+
 interface DishCardProps {
   dish: Dish;
 }
@@ -52,6 +63,24 @@ function getScoreColor(score: number): string {
   if (score === 3) return '#F59E0B';
   return '#EF4444';
 }
+
+// Readable German names for Allergen enum values
+const ALLERGEN_DISPLAY: Record<string, string> = {
+  gluten: 'Gluten',
+  crustaceans: 'Krebstiere',
+  eggs: 'Eier',
+  fish: 'Fisch',
+  peanuts: 'Erdnuesse',
+  soybeans: 'Soja',
+  milk: 'Milch',
+  nuts: 'Nuesse',
+  celery: 'Sellerie',
+  mustard: 'Senf',
+  sesame: 'Sesam',
+  sulphites: 'Sulfite',
+  lupin: 'Lupinen',
+  molluscs: 'Weichtiere',
+};
 
 export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
   const { name, description, price, labels, category, available, allergens: dishAllergens } = dish;
@@ -149,6 +178,7 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
 
       await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
       setIsFavorite(!isFavorite);
+      emitFavoritesChanged();
     } catch (error) {
       console.error('Error toggling favorite:', error);
     }
@@ -222,15 +252,68 @@ export const DishCard: React.FC<DishCardProps> = ({ dish }) => {
             <ThemedText style={[styles.description, { color: textSecondaryColor }]}>{description}</ThemedText>
         )}
 
-        {/* Allergen info row */}
-        {dishAllergens && dishAllergens.length > 0 && (
-            <View style={[styles.allergenRow, { backgroundColor: isDark ? '#1C1C1E' : '#F9FAFB' }]}>
-              <MaterialIcons name="info-outline" size={14} color={textSecondaryColor} />
-              <ThemedText style={[styles.allergenRowText, { color: textSecondaryColor }]}>
-                Allergene: {dishAllergens.map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')}
-              </ThemedText>
-            </View>
-        )}
+        {/* Allergen indicator row */}
+        <View style={[
+          styles.allergenIndicator,
+          {
+            backgroundColor: !dishAllergens || dishAllergens.length === 0
+                ? (isDark ? '#0A2E1A' : '#F0FDF4')
+                : allergenWarnings.length > 0
+                    ? (isDark ? '#2E0A0A' : '#FEF2F2')
+                    : (isDark ? '#2E2A0A' : '#FFFBEB'),
+          },
+        ]}>
+          <View style={styles.allergenIndicatorLeft}>
+            <MaterialIcons
+                name={!dishAllergens || dishAllergens.length === 0 ? 'verified' : 'warning'}
+                size={16}
+                color={!dishAllergens || dishAllergens.length === 0 ? '#22C55E' : allergenWarnings.length > 0 ? '#EF4444' : '#F59E0B'}
+            />
+            <ThemedText style={[
+              styles.allergenIndicatorLabel,
+              { color: textSecondaryColor },
+            ]}>
+              Allergene
+            </ThemedText>
+          </View>
+          <View style={styles.allergenIndicatorRight}>
+            {!dishAllergens || dishAllergens.length === 0 ? (
+                <ThemedText style={[styles.allergenNone, { color: '#22C55E' }]}>Keine</ThemedText>
+            ) : (
+                <View style={styles.allergenChipsRow}>
+                  {dishAllergens.slice(0, 3).map((a) => (
+                      <View
+                          key={a}
+                          style={[
+                            styles.allergenChip,
+                            {
+                              backgroundColor: allergenWarnings.some(
+                                  (w) => ALLERGEN_DISPLAY[a] === w || a === w
+                              )
+                                  ? (isDark ? '#5C1A1A' : '#FECACA')
+                                  : (isDark ? '#3A3A3C' : '#E5E7EB'),
+                            },
+                          ]}
+                      >
+                        <ThemedText style={[
+                          styles.allergenChipText,
+                          allergenWarnings.some(
+                              (w) => ALLERGEN_DISPLAY[a] === w || a === w
+                          ) && { color: '#EF4444', fontWeight: '700' },
+                        ]}>
+                          {ALLERGEN_DISPLAY[a] || a}
+                        </ThemedText>
+                      </View>
+                  ))}
+                  {dishAllergens.length > 3 && (
+                      <ThemedText style={[styles.allergenMore, { color: textSecondaryColor }]}>
+                        +{dishAllergens.length - 3}
+                      </ThemedText>
+                  )}
+                </View>
+            )}
+          </View>
+        </View>
 
         <View style={styles.footer}>
           <View style={styles.labelsContainer}>
@@ -402,18 +485,50 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Allergen info row
-  allergenRow: {
+  // Allergen indicator row
+  allergenIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  allergenIndicatorLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
   },
-  allergenRowText: {
+  allergenIndicatorLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  allergenIndicatorRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  allergenNone: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  allergenChipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  allergenChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  allergenChipText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  allergenMore: {
     fontSize: 12,
-    flex: 1,
+    fontWeight: '600',
+    marginLeft: 2,
   },
 
   // Sustainability row

@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { sendTestNotification } from '@/services/notifications/notificationService';
+import { notifyPreferencesChanged } from '@/hooks/useUserPreferences';
 
 const STORAGE_KEY = '@mensa_app_preferences';
 
@@ -79,6 +80,7 @@ export default function SettingsScreen() {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newPreferences));
       setPreferences(newPreferences);
+      notifyPreferencesChanged();
     } catch (error) {
       console.error('Error saving preferences:', error);
       Alert.alert('Fehler', 'Einstellungen konnten nicht gespeichert werden.');

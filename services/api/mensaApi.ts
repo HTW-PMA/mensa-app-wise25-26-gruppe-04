@@ -9,7 +9,7 @@
  * API-Doku: siehe mensaapi.yml
  */
 
-import { Dish, DishCategory, DishLabel } from '../../models/Dish';
+import { Allergen, Dish, DishCategory, DishLabel } from '../../models/Dish';
 import { Menu } from '../../models/Menu';
 import { API_CONFIG } from '../../config/api.config';
 import { LOCATIONS } from '../../constants/locations';
@@ -68,12 +68,18 @@ type MensaBadge = {
     description?: string;
 };
 
+type MensaAdditive = {
+    ID?: string;
+    name?: string;
+    description?: string;
+};
+
 type MensaMeal = {
     ID: string;
     name: string;
     category?: string;
     prices: MensaPrice[];
-    additives?: any[];
+    additives?: MensaAdditive[];
     badges?: MensaBadge[];
     waterBilanz?: number;
     co2Bilanz?: number;
@@ -346,6 +352,105 @@ export class MensaApiService {
         }, []);
     }
 
+    /**
+     * Allergen-Erkennung basierend auf EU-LMIV (14 Hauptallergene).
+     * Scannt sowohl API-Additives als auch den Gerichtnamen.
+     */
+
+    // Keywords fuer Additive-Texte (allgemeine Allergen-Begriffe)
+    private static readonly ADDITIVE_KEYWORDS: [string[], Allergen][] = [
+        [['gluten', 'weizen', 'roggen', 'gerste', 'hafer', 'dinkel', 'kamut'], Allergen.GLUTEN],
+        [['krebs', 'crustace', 'garnele', 'shrimp', 'krabbe', 'hummer'], Allergen.CRUSTACEANS],
+        [['ei', 'egg'], Allergen.EGGS],
+        [['fisch', 'fish'], Allergen.FISH],
+        [['erdnuss', 'erdnuess', 'peanut'], Allergen.PEANUTS],
+        [['soja', 'soy'], Allergen.SOYBEANS],
+        [['milch', 'laktose', 'milk', 'lactose'], Allergen.MILK],
+        [['nuss', 'nuess', 'schalenf', 'mandel', 'hasel', 'walnut', 'cashew', 'pistazie', 'macadamia', 'pecan'], Allergen.NUTS],
+        [['sellerie', 'celery'], Allergen.CELERY],
+        [['senf', 'mustard'], Allergen.MUSTARD],
+        [['sesam'], Allergen.SESAME],
+        [['sulfit', 'sulfite', 'schwefeldioxid', 'schwefel'], Allergen.SULPHITES],
+        [['lupin', 'lupine'], Allergen.LUPIN],
+        [['weichtier', 'mollusc', 'muschel', 'schnecke', 'tintenfisch'], Allergen.MOLLUSCS],
+    ];
+
+    // Keywords fuer Gerichtnamen (lebensmittelspezifisch)
+    private static readonly NAME_KEYWORDS: [string[], Allergen][] = [
+        // Gluten: Getreideprodukte, Teigwaren, Backwaren, paniert
+        [['nudel', 'pasta', 'spaghetti', 'penne', 'fusilli', 'tagliatelle', 'lasagne',
+          'pizza', 'brot', 'broetchen', 'semmel', 'paniert', 'paniermehl', 'brezel',
+          'mehl', 'kuchen', 'torte', 'keks', 'gebaeck', 'croissant', 'wrap', 'tortilla',
+          'couscous', 'bulgur', 'ebly', 'falafel', 'knodel', 'knoedel',
+          'weizen', 'roggen', 'gerste', 'hafer', 'dinkel',
+          'schnitzel', 'cordon', 'nugget', 'krokett'], Allergen.GLUTEN],
+        // Krebstiere
+        [['garnele', 'shrimp', 'krabbe', 'hummer', 'langust', 'scampi', 'krebse'], Allergen.CRUSTACEANS],
+        // Eier
+        [['eier', 'omelette', 'ruehrei', 'spiegelei', 'eierkuchen', 'pfannkuchen',
+          'crepe', 'quiche', 'souffle', 'meringue', 'baiser'], Allergen.EGGS],
+        // Fisch
+        [['fisch', 'lachs', 'forelle', 'kabeljau', 'seelachs', 'hering', 'thunfisch',
+          'pangasius', 'dorsch', 'scholle', 'zander', 'barsch', 'makrele', 'sardine',
+          'matjes', 'backfisch', 'fischstaebchen', 'sushi', 'rotbarsch', 'heilbutt',
+          'tilapia', 'saibling', 'dorade', 'wolfsbarsch'], Allergen.FISH],
+        // Erdnuesse
+        [['erdnuss', 'erdnuess', 'peanut'], Allergen.PEANUTS],
+        // Soja
+        [['soja', 'tofu', 'edamame', 'tempeh', 'miso'], Allergen.SOYBEANS],
+        // Milch (inkl. Laktose) - Kaese, Sahne, Joghurt, Butter, etc.
+        [['milch', 'kaese', 'sahne', 'quark', 'joghurt', 'yoghurt', 'butter',
+          'rahm', 'schmand', 'mozzarella', 'parmesan', 'gouda', 'emmentaler',
+          'creme', 'mascarpone', 'ricotta', 'feta', 'camembert', 'brie',
+          'frischkaese', 'frischkäse', 'bechamel', 'laktose',
+          'ueberbacken', 'gratiniert', 'kaesesauce', 'cheese'], Allergen.MILK],
+        // Schalenfruechte / Nuesse
+        [['mandel', 'haselnuss', 'walnuss', 'cashew', 'pistazie', 'macadamia',
+          'pecan', 'paranuss', 'maroni', 'nussig'], Allergen.NUTS],
+        // Sellerie
+        [['sellerie'], Allergen.CELERY],
+        // Senf
+        [['senf'], Allergen.MUSTARD],
+        // Sesam
+        [['sesam'], Allergen.SESAME],
+        // Sulfite
+        [['sulfit', 'schwefeldioxid'], Allergen.SULPHITES],
+        // Lupinen
+        [['lupin', 'lupine'], Allergen.LUPIN],
+        // Weichtiere
+        [['muschel', 'tintenfisch', 'calamari', 'oktopus', 'schnecke', 'austern'], Allergen.MOLLUSCS],
+    ];
+
+    private static scanText(text: string, keywordMap: [string[], Allergen][], result: Set<Allergen>): void {
+        const lower = text.toLowerCase()
+            .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+
+        for (const [keywords, allergen] of keywordMap) {
+            if (keywords.some((kw) => lower.includes(kw))) {
+                result.add(allergen);
+            }
+        }
+    }
+
+    private static detectAllergens(mealName: string, additives?: MensaAdditive[]): Allergen[] {
+        const result = new Set<Allergen>();
+
+        // 1) Scan API-Additives
+        if (additives && additives.length > 0) {
+            for (const additive of additives) {
+                const text = (additive?.name || additive?.description || String(additive || ''));
+                if (text) MensaApiService.scanText(text, MensaApiService.ADDITIVE_KEYWORDS, result);
+            }
+        }
+
+        // 2) Scan Gerichtname auf lebensmittelspezifische Keywords
+        if (mealName) {
+            MensaApiService.scanText(mealName, MensaApiService.NAME_KEYWORDS, result);
+        }
+
+        return Array.from(result);
+    }
+
     // Ein Mensa-Meal -> Dish Modell der App
     private static mapMealToDish(meal: MensaMeal): Dish {
         const prices = meal.prices || [];
@@ -403,7 +508,7 @@ export class MensaApiService {
                 guest,
             },
             nutrition: undefined, // waterBilanz / co2Bilanz könntest du hier später mappen
-            allergens: [], // Additives könntest du auf Allergen-Enum mappen, wenn gewünscht
+            allergens: MensaApiService.detectAllergens(meal.name, meal.additives),
             ingredients: undefined,
             labels: MensaApiService.mapBadges(meal.badges),
             imageUrl: undefined,
