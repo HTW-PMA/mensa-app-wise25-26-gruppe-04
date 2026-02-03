@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ScrollView, View, Switch, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { UniColors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { sendTestNotification } from '@/services/notifications/notificationService';
 
 const STORAGE_KEY = '@mensa_app_preferences';
 
@@ -16,28 +18,28 @@ interface UserPreferences {
   notificationsEnabled: boolean;
 }
 
-const DIETARY_OPTIONS = [
-  { id: 'vegetarian', label: 'Vegetarisch' },
-  { id: 'vegan', label: 'Vegan' },
-  { id: 'glutenfree', label: 'Glutenfrei' },
-  { id: 'lactosefree', label: 'Laktosefrei' },
-  { id: 'halal', label: 'Halal' },
-  { id: 'kosher', label: 'Koscher' },
+const DIETARY_OPTIONS: { id: string; label: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }[] = [
+  { id: 'vegetarian', label: 'Vegetarisch', icon: 'grass' },
+  { id: 'vegan', label: 'Vegan', icon: 'eco' },
+  { id: 'glutenfree', label: 'Glutenfrei', icon: 'grain' },
+  { id: 'lactosefree', label: 'Laktosefrei', icon: 'water-drop' },
+  { id: 'halal', label: 'Halal', icon: 'verified' },
+  { id: 'kosher', label: 'Koscher', icon: 'star' },
 ];
 
-const ALLERGEN_OPTIONS = [
-  { id: 'gluten', label: 'Gluten' },
-  { id: 'milk', label: 'Milch' },
-  { id: 'eggs', label: 'Eier' },
-  { id: 'fish', label: 'Fisch' },
-  { id: 'shellfish', label: 'Schalentiere' },
-  { id: 'nuts', label: 'Nüsse' },
-  { id: 'peanuts', label: 'Erdnüsse' },
-  { id: 'soy', label: 'Soja' },
-  { id: 'celery', label: 'Sellerie' },
-  { id: 'mustard', label: 'Senf' },
-  { id: 'sesame', label: 'Sesam' },
-  { id: 'sulfites', label: 'Sulfite' },
+const ALLERGEN_OPTIONS: { id: string; label: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }[] = [
+  { id: 'gluten', label: 'Gluten', icon: 'grain' },
+  { id: 'milk', label: 'Milch', icon: 'water-drop' },
+  { id: 'eggs', label: 'Eier', icon: 'egg' },
+  { id: 'fish', label: 'Fisch', icon: 'set-meal' },
+  { id: 'shellfish', label: 'Schalentiere', icon: 'set-meal' },
+  { id: 'nuts', label: 'Nuesse', icon: 'forest' },
+  { id: 'peanuts', label: 'Erdnuesse', icon: 'forest' },
+  { id: 'soy', label: 'Soja', icon: 'spa' },
+  { id: 'celery', label: 'Sellerie', icon: 'grass' },
+  { id: 'mustard', label: 'Senf', icon: 'local-florist' },
+  { id: 'sesame', label: 'Sesam', icon: 'grain' },
+  { id: 'sulfites', label: 'Sulfite', icon: 'science' },
 ];
 
 export default function SettingsScreen() {
@@ -48,16 +50,13 @@ export default function SettingsScreen() {
     notificationsEnabled: false,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const colorScheme = useColorScheme() ?? 'light';
+  const isDark = colorScheme === 'dark';
 
-  // Theme colors
   const primaryColor = useThemeColor({}, 'primary');
   const errorColor = useThemeColor({}, 'error');
-  const borderColor = useThemeColor({}, 'border');
-  const surfaceColor = useThemeColor({}, 'surface');
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
-  const rowColor = useThemeColor({ light: '#F2F3F5', dark: '#2C2C2E' }, 'background');
 
-  // Load preferences on mount
   useEffect(() => {
     loadPreferences();
   }, []);
@@ -90,7 +89,6 @@ export default function SettingsScreen() {
     const updated = preferences.dietaryRestrictions.includes(id)
         ? preferences.dietaryRestrictions.filter((item) => item !== id)
         : [...preferences.dietaryRestrictions, id];
-
     savePreferences({ ...preferences, dietaryRestrictions: updated });
   };
 
@@ -98,42 +96,51 @@ export default function SettingsScreen() {
     const updated = preferences.allergens.includes(id)
         ? preferences.allergens.filter((item) => item !== id)
         : [...preferences.allergens, id];
-
     savePreferences({ ...preferences, allergens: updated });
-  };
-
-  const toggleNotifications = () => {
-    savePreferences({ ...preferences, notificationsEnabled: !preferences.notificationsEnabled });
   };
 
   const resetPreferences = () => {
     Alert.alert(
-        'Einstellungen zurücksetzen',
-        'Möchten Sie wirklich alle Einstellungen zurücksetzen?',
+        'Einstellungen zuruecksetzen',
+        'Moechten Sie wirklich alle Einstellungen zuruecksetzen?',
         [
           { text: 'Abbrechen', style: 'cancel' },
           {
-            text: 'Zurücksetzen',
+            text: 'Zuruecksetzen',
             style: 'destructive',
             onPress: () => {
-              const defaultPrefs = {
+              savePreferences({
                 dietaryRestrictions: [],
                 allergens: [],
                 maxPrice: 10,
                 notificationsEnabled: false,
-              };
-              savePreferences(defaultPrefs);
+              });
             },
           },
         ]
     );
   };
 
+  const toggleNotifications = () => {
+    savePreferences({ ...preferences, notificationsEnabled: !preferences.notificationsEnabled });
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      await sendTestNotification();
+      Alert.alert('Erfolg', 'Test-Benachrichtigung wurde gesendet.');
+    } catch {
+      Alert.alert('Fehler', 'Test-Benachrichtigung konnte nicht gesendet werden.');
+    }
+  };
+
+  const activeFilterCount = preferences.dietaryRestrictions.length + preferences.allergens.length;
+
   if (isLoading) {
     return (
         <ThemedView style={styles.container}>
           <SafeAreaView style={styles.safeArea} edges={['top']}>
-            <ThemedText>Lädt Einstellungen...</ThemedText>
+            <ThemedText>Laedt Einstellungen...</ThemedText>
           </SafeAreaView>
         </ThemedView>
     );
@@ -142,61 +149,175 @@ export default function SettingsScreen() {
   return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top']}>
-          <ScrollView style={styles.container}>
-            <ThemedView style={styles.header}>
-              <ThemedText type="title">Einstellungen</ThemedText>
-              <ThemedText style={{ color: textSecondaryColor }}>Präferenzen & Allergien</ThemedText>
-            </ThemedView>
+          <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.headerTop}>
+                <View>
+                  <ThemedText type="title">Einstellungen</ThemedText>
+                  <ThemedText style={{ color: textSecondaryColor, marginTop: 4 }}>
+                    Praeferenzen & Allergien
+                  </ThemedText>
+                </View>
+                {activeFilterCount > 0 && (
+                    <View style={[styles.filterCountBadge, { backgroundColor: primaryColor }]}>
+                      <ThemedText style={styles.filterCountText}>{activeFilterCount}</ThemedText>
+                    </View>
+                )}
+              </View>
+            </View>
+
+            {/* Active filters summary */}
+            {activeFilterCount > 0 && (
+                <View style={[styles.summaryCard, { backgroundColor: isDark ? '#0A2E1A' : '#F0FDF4' }]}>
+                  <MaterialIcons name="check-circle" size={20} color="#22C55E" />
+                  <View style={styles.summaryContent}>
+                    <ThemedText style={styles.summaryTitle}>Aktive Filter</ThemedText>
+                    <ThemedText style={[styles.summaryValue, { color: textSecondaryColor }]}>
+                      {[
+                        ...preferences.dietaryRestrictions.map(
+                            id => DIETARY_OPTIONS.find(o => o.id === id)?.label
+                        ),
+                        ...preferences.allergens.map(
+                            id => ALLERGEN_OPTIONS.find(o => o.id === id)?.label
+                        ),
+                      ]
+                          .filter(Boolean)
+                          .join(', ')}
+                    </ThemedText>
+                  </View>
+                </View>
+            )}
 
             {/* Dietary Restrictions */}
-            <ThemedView style={[styles.section, { borderTopColor: borderColor }]}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Ernährungspräferenzen
-              </ThemedText>
-              {DIETARY_OPTIONS.map((option) => (
-                  <View key={option.id} style={[styles.optionRow, { backgroundColor: rowColor }]}>
-                    <ThemedText style={styles.optionLabel}>{option.label}</ThemedText>
-                    <Switch
-                        value={preferences.dietaryRestrictions.includes(option.id)}
-                        onValueChange={() => toggleDietaryRestriction(option.id)}
-                        trackColor={{ false: '#767680', true: primaryColor }}
-                        thumbColor="#fff"
-                    />
-                  </View>
-              ))}
-            </ThemedView>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionIconCircle, { backgroundColor: isDark ? '#1A3D1A' : '#ECFDF5' }]}>
+                  <MaterialIcons name="restaurant" size={18} color={primaryColor} />
+                </View>
+                <View>
+                  <ThemedText type="subtitle">Ernaehrungspraeferenzen</ThemedText>
+                  <ThemedText style={[styles.sectionDesc, { color: textSecondaryColor }]}>
+                    Gerichte nach Ernaehrungsweise filtern
+                  </ThemedText>
+                </View>
+              </View>
+
+              <View style={styles.chipGrid}>
+                {DIETARY_OPTIONS.map((option) => {
+                  const isActive = preferences.dietaryRestrictions.includes(option.id);
+                  return (
+                      <TouchableOpacity
+                          key={option.id}
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: isActive
+                                  ? (isDark ? '#1A3D1A' : '#ECFDF5')
+                                  : (isDark ? '#2C2C2E' : '#F2F3F5'),
+                              borderColor: isActive ? primaryColor : 'transparent',
+                              borderWidth: 1.5,
+                            },
+                          ]}
+                          onPress={() => toggleDietaryRestriction(option.id)}
+                          activeOpacity={0.7}
+                      >
+                        <MaterialIcons
+                            name={option.icon}
+                            size={18}
+                            color={isActive ? primaryColor : textSecondaryColor}
+                        />
+                        <ThemedText
+                            style={[
+                              styles.chipLabel,
+                              { color: isActive ? primaryColor : undefined },
+                            ]}
+                        >
+                          {option.label}
+                        </ThemedText>
+                        {isActive && (
+                            <MaterialIcons name="check-circle" size={16} color={primaryColor} />
+                        )}
+                      </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
             {/* Allergens */}
-            <ThemedView style={[styles.section, { borderTopColor: borderColor }]}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Allergene
-              </ThemedText>
-              <ThemedText style={[styles.sectionDescription, { color: textSecondaryColor }]}>
-                Wählen Sie Ihre Allergene aus, um Warnungen zu erhalten
-              </ThemedText>
-              {ALLERGEN_OPTIONS.map((option) => (
-                  <View key={option.id} style={[styles.optionRow, { backgroundColor: rowColor }]}>
-                    <ThemedText style={styles.optionLabel}>{option.label}</ThemedText>
-                    <Switch
-                        value={preferences.allergens.includes(option.id)}
-                        onValueChange={() => toggleAllergen(option.id)}
-                        trackColor={{ false: '#767680', true: errorColor }}
-                        thumbColor="#fff"
-                    />
-                  </View>
-              ))}
-            </ThemedView>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionIconCircle, { backgroundColor: isDark ? '#3D1A1A' : '#FEF2F2' }]}>
+                  <MaterialIcons name="warning" size={18} color={errorColor} />
+                </View>
+                <View>
+                  <ThemedText type="subtitle">Allergene</ThemedText>
+                  <ThemedText style={[styles.sectionDesc, { color: textSecondaryColor }]}>
+                    Warnungen bei allergenen Zutaten
+                  </ThemedText>
+                </View>
+              </View>
+
+              <View style={styles.chipGrid}>
+                {ALLERGEN_OPTIONS.map((option) => {
+                  const isActive = preferences.allergens.includes(option.id);
+                  return (
+                      <TouchableOpacity
+                          key={option.id}
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: isActive
+                                  ? (isDark ? '#3D1A1A' : '#FEF2F2')
+                                  : (isDark ? '#2C2C2E' : '#F2F3F5'),
+                              borderColor: isActive ? errorColor : 'transparent',
+                              borderWidth: 1.5,
+                            },
+                          ]}
+                          onPress={() => toggleAllergen(option.id)}
+                          activeOpacity={0.7}
+                      >
+                        <MaterialIcons
+                            name={option.icon}
+                            size={18}
+                            color={isActive ? errorColor : textSecondaryColor}
+                        />
+                        <ThemedText
+                            style={[
+                              styles.chipLabel,
+                              { color: isActive ? errorColor : undefined },
+                            ]}
+                        >
+                          {option.label}
+                        </ThemedText>
+                        {isActive && (
+                            <MaterialIcons name="check-circle" size={16} color={errorColor} />
+                        )}
+                      </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
             {/* Push Notifications */}
-            <ThemedView style={[styles.section, { borderTopColor: borderColor }]}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Benachrichtigungen
-              </ThemedText>
-              <ThemedText style={[styles.sectionDescription, { color: textSecondaryColor }]}>
-                Erhalte Push-Benachrichtigungen, wenn deine Lieblingsspeisen verfügbar sind
-              </ThemedText>
-              <View style={[styles.optionRow, { backgroundColor: rowColor }]}>
-                <ThemedText style={styles.optionLabel}>Push-Benachrichtigungen</ThemedText>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionIconCircle, { backgroundColor: isDark ? '#1A2A3D' : '#EFF6FF' }]}>
+                  <MaterialIcons name="notifications" size={18} color={primaryColor} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="subtitle">Benachrichtigungen</ThemedText>
+                  <ThemedText style={[styles.sectionDesc, { color: textSecondaryColor }]}>
+                    Push-Benachrichtigungen fuer Lieblingsspeisen
+                  </ThemedText>
+                </View>
+              </View>
+
+              <View style={[styles.notificationRow, { backgroundColor: isDark ? '#2C2C2E' : '#F2F3F5' }]}>
+                <View style={styles.notificationRowLeft}>
+                  <MaterialIcons name="notifications-active" size={20} color={preferences.notificationsEnabled ? primaryColor : textSecondaryColor} />
+                  <ThemedText style={styles.chipLabel}>Push-Benachrichtigungen</ThemedText>
+                </View>
                 <Switch
                     value={preferences.notificationsEnabled}
                     onValueChange={toggleNotifications}
@@ -204,43 +325,75 @@ export default function SettingsScreen() {
                     thumbColor="#fff"
                 />
               </View>
-            </ThemedView>
+
+              <TouchableOpacity
+                  style={[styles.testButton, { backgroundColor: isDark ? '#1A2A3D' : '#EFF6FF' }]}
+                  onPress={handleTestNotification}
+                  activeOpacity={0.7}
+              >
+                <MaterialIcons name="send" size={18} color={primaryColor} />
+                <ThemedText style={[styles.testButtonText, { color: primaryColor }]}>
+                  Test-Benachrichtigung senden
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
 
             {/* Summary */}
-            <ThemedView style={[styles.section, { borderTopColor: borderColor }]}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Zusammenfassung
-              </ThemedText>
-              <View style={[styles.summaryBox, { backgroundColor: rowColor }]}>
-                <ThemedText style={styles.summaryLabel}>Ernährung:</ThemedText>
-                <ThemedText style={[styles.summaryValue, { color: textSecondaryColor }]}>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionIconCircle, { backgroundColor: isDark ? '#1C1C1E' : '#F2F3F5' }]}>
+                  <MaterialIcons name="summarize" size={18} color={primaryColor} />
+                </View>
+                <View>
+                  <ThemedText type="subtitle">Zusammenfassung</ThemedText>
+                </View>
+              </View>
+
+              <View style={[styles.summaryRow, { backgroundColor: isDark ? '#2C2C2E' : '#F2F3F5' }]}>
+                <ThemedText style={styles.summaryRowLabel}>Ernaehrung:</ThemedText>
+                <ThemedText style={[styles.summaryRowValue, { color: textSecondaryColor }]}>
                   {preferences.dietaryRestrictions.length > 0
                       ? preferences.dietaryRestrictions
                           .map((id) => DIETARY_OPTIONS.find((o) => o.id === id)?.label)
+                          .filter(Boolean)
                           .join(', ')
-                      : 'Keine Einschränkungen'}
+                      : 'Keine Einschraenkungen'}
                 </ThemedText>
               </View>
-              <View style={[styles.summaryBox, { backgroundColor: rowColor }]}>
-                <ThemedText style={styles.summaryLabel}>Allergene:</ThemedText>
-                <ThemedText style={[styles.summaryValue, { color: textSecondaryColor }]}>
+              <View style={[styles.summaryRow, { backgroundColor: isDark ? '#2C2C2E' : '#F2F3F5' }]}>
+                <ThemedText style={styles.summaryRowLabel}>Allergene:</ThemedText>
+                <ThemedText style={[styles.summaryRowValue, { color: textSecondaryColor }]}>
                   {preferences.allergens.length > 0
                       ? preferences.allergens
                           .map((id) => ALLERGEN_OPTIONS.find((o) => o.id === id)?.label)
+                          .filter(Boolean)
                           .join(', ')
                       : 'Keine Allergene'}
                 </ThemedText>
               </View>
-            </ThemedView>
+              <View style={[styles.summaryRow, { backgroundColor: isDark ? '#2C2C2E' : '#F2F3F5' }]}>
+                <ThemedText style={styles.summaryRowLabel}>Benachrichtigungen:</ThemedText>
+                <ThemedText style={[styles.summaryRowValue, { color: preferences.notificationsEnabled ? primaryColor : textSecondaryColor }]}>
+                  {preferences.notificationsEnabled ? 'Aktiviert' : 'Deaktiviert'}
+                </ThemedText>
+              </View>
+            </View>
 
             {/* Reset Button */}
-            <ThemedView style={[styles.section, { borderTopColor: borderColor }]}>
-              <TouchableOpacity style={[styles.resetButton, { backgroundColor: errorColor }]} onPress={resetPreferences}>
-                <ThemedText style={styles.resetButtonText}>
-                  Alle Einstellungen zurücksetzen
+            <View style={styles.section}>
+              <TouchableOpacity
+                  style={[styles.resetButton, { backgroundColor: isDark ? '#3D1A1A' : '#FEF2F2' }]}
+                  onPress={resetPreferences}
+                  activeOpacity={0.7}
+              >
+                <MaterialIcons name="restart-alt" size={20} color={errorColor} />
+                <ThemedText style={[styles.resetButtonText, { color: errorColor }]}>
+                  Alle Einstellungen zuruecksetzen
                 </ThemedText>
               </TouchableOpacity>
-            </ThemedView>
+            </View>
+
+            <View style={{ height: 40 }} />
           </ScrollView>
         </SafeAreaView>
       </ThemedView>
@@ -257,53 +410,145 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     paddingTop: 10,
-    gap: 8,
   },
-  section: {
-    padding: 20,
-    gap: 12,
-    borderTopWidth: 1,
-  },
-  sectionTitle: {
-    marginBottom: 8,
-  },
-  sectionDescription: {
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  optionRow: {
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  filterCountBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 8,
+    justifyContent: 'center',
   },
-  optionLabel: {
-    fontSize: 16,
+  filterCountText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
-  summaryBox: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
+
+  // Summary card
+  summaryCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 14,
   },
-  summaryLabel: {
+  summaryContent: {
+    flex: 1,
+  },
+  summaryTitle: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   summaryValue: {
-    fontSize: 14,
+    fontSize: 13,
   },
-  resetButton: {
-    padding: 16,
+
+  // Section
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  sectionIconCircle: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionDesc: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+
+  // Chip grid
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  chipLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  // Notification row
+  notificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  notificationRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  // Test button
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
+  },
+  testButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // Summary rows
+  summaryRow: {
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  summaryRowLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  summaryRowValue: {
+    fontSize: 13,
+  },
+
+  // Reset
+  resetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    borderRadius: 14,
   },
   resetButtonText: {
-    color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

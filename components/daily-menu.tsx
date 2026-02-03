@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from './themed-text';
-import { HTWColors } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useMenuData } from '@/hooks/useMenuData';
 import { MenuSection } from './menu-section';
-import { Menu } from "@/models/Menu";
+import { Menu } from '@/models/Menu';
 
 interface DailyMenuProps {
   date: Date;
@@ -22,87 +24,86 @@ const formatDate = (date: Date) => {
 
 export const DailyMenu: React.FC<DailyMenuProps> = ({ date, locationId, locationName }) => {
   const { menu, loading, error } = useMenuData(date, locationId);
+  const colorScheme = useColorScheme() ?? 'light';
+  const isDark = colorScheme === 'dark';
+
+  const primaryColor = useThemeColor({}, 'primary');
+  const textSecondaryColor = useThemeColor({}, 'textSecondary');
+  const errorColor = useThemeColor({}, 'error');
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={HTWColors.primary} />
-        <ThemedText style={styles.loadingText}>Menü wird geladen...</ThemedText>
-      </View>
+        <View style={styles.centered}>
+          <View style={[styles.iconCircle, { backgroundColor: isDark ? '#1C1C1E' : '#F2F3F5' }]}>
+            <ActivityIndicator size="small" color={primaryColor} />
+          </View>
+          <ThemedText style={[styles.stateTitle, { color: textSecondaryColor }]}>
+            Menue wird geladen...
+          </ThemedText>
+        </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centered}>
-        <ThemedText type="subtitle" style={styles.errorTitle}>
-          Fehler beim Laden des Menüs
-        </ThemedText>
-        <ThemedText style={styles.errorText}>
-          {error.message}
-        </ThemedText>
-        <ThemedText style={styles.errorText}>
-          Bitte überprüfe deine Internetverbindung und den API-Schlüssel.
-        </ThemedText>
-        {/* A simple refresh button could be added here */}
-      </View>
+        <View style={styles.centered}>
+          <View style={[styles.iconCircle, { backgroundColor: isDark ? '#3D1A1A' : '#FEF2F2' }]}>
+            <MaterialIcons name="error-outline" size={24} color={errorColor} />
+          </View>
+          <ThemedText type="subtitle" style={[styles.stateTitle, { color: errorColor }]}>
+            Fehler beim Laden
+          </ThemedText>
+          <ThemedText style={[styles.stateDesc, { color: textSecondaryColor }]}>
+            {error.message}
+          </ThemedText>
+          <ThemedText style={[styles.stateDesc, { color: textSecondaryColor }]}>
+            Bitte ueberpruefe deine Internetverbindung.
+          </ThemedText>
+        </View>
     );
   }
 
   if (!menu || menu.dishes.length === 0) {
     return (
-      <View style={styles.centered}>
-        <ThemedText type="subtitle" style={styles.emptyTitle}>
-          Kein Menü verfügbar
-        </ThemedText>
-        <ThemedText style={styles.emptyText}>
-          Für den {formatDate(date)} sind keine Menüdaten vorhanden.
-        </ThemedText>
-      </View>
+        <View style={styles.centered}>
+          <View style={[styles.iconCircle, { backgroundColor: isDark ? '#2E2A0A' : '#FFFBEB' }]}>
+            <MaterialIcons name="no-meals" size={24} color="#F59E0B" />
+          </View>
+          <ThemedText type="subtitle" style={[styles.stateTitle, { color: '#F59E0B' }]}>
+            Kein Menue verfuegbar
+          </ThemedText>
+          <ThemedText style={[styles.stateDesc, { color: textSecondaryColor }]}>
+            Fuer den {formatDate(date)} sind keine Menuedaten vorhanden.
+          </ThemedText>
+        </View>
     );
   }
 
-  // The useMenuData hook currently returns a single Menu object, but the API might return multiple
-  // for different meal types (breakfast, lunch, dinner). Since the model is 'Menu' (singular),
-  // I will assume for now that the API returns a single combined menu or the hook needs adjustment.
-  // Based on the API endpoints, getDailyMenu should return a single day's menu, which might contain
-  // all meal types or just one. Given the current structure, I'll treat the single 'menu' object
-  // as the daily menu and display its dishes.
-
-  // To properly handle multiple meal types, the API should return an array of Menu objects,
-  // or the single Menu object should contain all meal types.
-  // Since the `Menu` model has `mealType`, let's assume the API returns an array of `Menu` objects
-  // for different meal types, and the `useMenuData` hook needs to be updated to handle this.
-
-  // Re-reading `useMenuData.ts`:
-  // `const menuData = await MensaApiService.getDailyMenu(date || new Date());`
-  // `MensaApiService.getDailyMenu(date: Date): Promise<Menu>`
-  // This suggests a single Menu object is expected. I will proceed with the assumption that the
-  // single Menu object represents the entire daily offering, and the `mealType` is just a label
-  // for the entire day's menu, or that the API is structured to return only one meal type per call.
-  // Given the `Menu` model structure, it's more likely the API returns an array of Menu objects,
-  // one for each meal type. I will update the `useMenuData` hook and the `MensaApiService`
-  // to reflect the likely array return type for daily menu.
-
-  // ***Correction: The `useMenuData` hook expects a single `Menu` object.
-  // I will create a dummy array for demonstration purposes until the API is confirmed.
-  // For now, I will display the dishes from the single `menu` object.
-
-  // Let's create a temporary structure to simulate multiple meal types for better UI:
-  const dailyMenus: Menu[] = [menu]; // Placeholder
+  const availableCount = menu.dishes.filter(d => d.available).length;
+  const dailyMenus: Menu[] = [menu];
 
   return (
-    <View style={styles.container}>
-      <ThemedText type="title" style={styles.dateTitle}>
-        {formatDate(date)}
-      </ThemedText>
-      {locationName ? (
-        <ThemedText style={styles.locationText}>{locationName}</ThemedText>
-      ) : null}
-      {dailyMenus.map((m) => (
-        <MenuSection key={m.id} menu={m} />
-      ))}
-    </View>
+      <View style={styles.container}>
+        {/* Date banner */}
+        <View style={[styles.dateBanner, { backgroundColor: isDark ? '#1C1C1E' : '#F2F3F5' }]}>
+          <MaterialIcons name="calendar-today" size={18} color={primaryColor} />
+          <View style={styles.dateBannerText}>
+            <ThemedText style={styles.dateTitle}>{formatDate(date)}</ThemedText>
+            {locationName ? (
+                <ThemedText style={[styles.locationText, { color: textSecondaryColor }]}>
+                  {locationName}
+                </ThemedText>
+            ) : null}
+          </View>
+          <View style={[styles.countBadge, { backgroundColor: primaryColor + '15' }]}>
+            <ThemedText style={[styles.countText, { color: primaryColor }]}>{availableCount}</ThemedText>
+          </View>
+        </View>
+
+        {dailyMenus.map((m) => (
+            <MenuSection key={m.id} menu={m} />
+        ))}
+      </View>
   );
 };
 
@@ -116,36 +117,56 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    gap: 10,
   },
-  loadingText: {
-    marginTop: 10,
-    color: HTWColors.textLight,
-  },
-  errorTitle: {
-    color: HTWColors.error,
-    marginBottom: 8,
-  },
-  errorText: {
-    textAlign: 'center',
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 4,
   },
-  emptyTitle: {
-    color: HTWColors.warning,
-    marginBottom: 8,
-  },
-  emptyText: {
+  stateTitle: {
+    fontSize: 17,
+    fontWeight: '600',
     textAlign: 'center',
   },
-  dateTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  stateDesc: {
+    textAlign: 'center',
+    fontSize: 14,
+  },
+
+  // Date banner
+  dateBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 16,
     marginBottom: 20,
-    paddingHorizontal: 20,
+    padding: 14,
+    borderRadius: 14,
+  },
+  dateBannerText: {
+    flex: 1,
+  },
+  dateTitle: {
+    fontSize: 17,
+    fontWeight: '700',
   },
   locationText: {
-    paddingHorizontal: 20,
-    marginTop: -14,
-    marginBottom: 14,
-    color: HTWColors.textLight,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  countBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

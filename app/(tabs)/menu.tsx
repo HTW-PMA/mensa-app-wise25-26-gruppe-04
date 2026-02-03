@@ -1,6 +1,7 @@
 import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { DailyMenu } from '@/components/daily-menu';
@@ -40,6 +41,7 @@ export default function MenuScreen() {
   const [selectedUniversityId, setSelectedUniversityId] = useState('htw');
   const [selectedCanteenId, setSelectedCanteenId] = useState<string | null>(null);
 
+  const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const isDark = colorScheme === 'dark';
 
@@ -291,6 +293,24 @@ export default function MenuScreen() {
             </View>
           </View>
 
+          {/* Sustainability banner */}
+          <TouchableOpacity
+            style={[styles.sustainabilityBanner, { backgroundColor: isDark ? '#0A2E1A' : '#F0FDF4' }]}
+            onPress={() => router.push('/sustainability')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.sustainabilityIconCircle, { backgroundColor: isDark ? '#1A3D1A' : '#DCFCE7' }]}>
+              <MaterialIcons name="eco" size={20} color="#22C55E" />
+            </View>
+            <View style={styles.sustainabilityBannerText}>
+              <ThemedText style={styles.sustainabilityBannerTitle}>Nachhaltigkeit</ThemedText>
+              <ThemedText style={[styles.sustainabilityBannerDesc, { color: textSecondaryColor }]}>
+                CO2-Bilanz, Wasser-Fussabdruck & mehr
+              </ThemedText>
+            </View>
+            <MaterialIcons name="chevron-right" size={22} color="#22C55E" />
+          </TouchableOpacity>
+
           {/* Menu content */}
           <ThemedView style={styles.content}>
             {selectedCanteen && (
@@ -415,6 +435,36 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     marginTop: 2,
+  },
+
+  // Sustainability banner
+  sustainabilityBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    padding: 14,
+    borderRadius: 16,
+  },
+  sustainabilityIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sustainabilityBannerText: {
+    flex: 1,
+  },
+  sustainabilityBannerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  sustainabilityBannerDesc: {
+    fontSize: 12,
+    marginTop: 1,
   },
 
   content: {
