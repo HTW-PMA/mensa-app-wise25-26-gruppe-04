@@ -114,8 +114,13 @@ export default function HomeScreen() {
   const promptOpacity = useRef(new Animated.Value(1)).current;
   const promptTranslateY = useRef(new Animated.Value(0)).current;
 
-  const prefs = useUserPreferences();
-  const activeFiltersCount = prefs.dietaryRestrictions.length + prefs.allergens.length;
+  // ✅ FIX: Hook richtig destructuren
+  const { prefs, loadingPrefs } = useUserPreferences();
+
+  // ✅ FIX: safe lengths (niemals undefined.length)
+  const activeFiltersCount =
+    (prefs?.dietaryRestrictions?.length ?? 0) +
+    (prefs?.allergens?.length ?? 0);
 
   // Theme colors
   const surfaceColor = useThemeColor({}, 'surface');
@@ -123,18 +128,22 @@ export default function HomeScreen() {
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
   const borderColor = useThemeColor({}, 'border');
 
-  const selectedUniversity = useMemo(
-    () => UNIVERSITIES.find((u) => u.id === selectedUniversityId) || UNIVERSITIES[0],
-    [selectedUniversityId]
-  );
+  // ✅ FIX: safe fallback wenn UNIVERSITIES leer/undefined wäre
+  const selectedUniversity = useMemo(() => {
+    const uni = UNIVERSITIES?.find((u) => u.id === selectedUniversityId);
+    return uni ?? UNIVERSITIES?.[0] ?? ({ id: 'htw', name: 'HTW', canteens: [] } as any);
+  }, [selectedUniversityId]);
+
+  // ✅ FIX: canteens safe
+  const canteens = selectedUniversity?.canteens ?? [];
 
   const selectedCanteen = useMemo(() => {
-    const availableCanteens = selectedUniversity.canteens || [];
+    if (canteens.length === 0) return null;
     if (selectedCanteenId) {
-      return availableCanteens.find((c) => c.id === selectedCanteenId) || availableCanteens[0];
+      return canteens.find((c) => c.id === selectedCanteenId) ?? canteens[0];
     }
-    return availableCanteens[0];
-  }, [selectedCanteenId, selectedUniversity]);
+    return canteens[0];
+  }, [selectedCanteenId, canteens]);
 
   // Load saved selection
   useEffect(() => {
@@ -158,7 +167,12 @@ export default function HomeScreen() {
     useCallback(() => {
       AsyncStorage.getItem(FAVORITES_STORAGE_KEY).then((raw) => {
         if (raw) {
-          try { setFavoritesCount(JSON.parse(raw).length); } catch { setFavoritesCount(0); }
+          try {
+            const parsed = JSON.parse(raw);
+            setFavoritesCount(Array.isArray(parsed) ? parsed.length : 0);
+          } catch {
+            setFavoritesCount(0);
+          }
         } else {
           setFavoritesCount(0);
         }
@@ -223,6 +237,7 @@ export default function HomeScreen() {
                 </ThemedText>
               </View>
             </View>
+
             <TouchableOpacity
               style={[styles.settingsBtn, { backgroundColor: isDark ? '#1C1C1E' : '#F2F3F5' }]}
               onPress={() => router.push('/(tabs)/settings' as any)}
@@ -246,7 +261,9 @@ export default function HomeScreen() {
                 { opacity: promptOpacity, transform: [{ translateY: promptTranslateY }] },
               ]}
             >
-              <ThemedText style={[styles.promptText, { color: textSecondaryColor }]}>{PROMPTS[promptIndex]}</ThemedText>
+              <ThemedText style={[styles.promptText, { color: textSecondaryColor }]}>
+                {PROMPTS[promptIndex]}
+              </ThemedText>
             </Animated.View>
           </View>
 
@@ -277,14 +294,16 @@ export default function HomeScreen() {
               <ThemedText style={styles.statValue}>{favoritesCount}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: textSecondaryColor }]}>Favoriten</ThemedText>
             </View>
+
             <View style={[styles.statCard, { backgroundColor: isDark ? '#1C1C1E' : '#F2F3F5' }]}>
               <MaterialIcons name="filter-list" size={18} color="#8B5CF6" />
               <ThemedText style={styles.statValue}>{activeFiltersCount}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: textSecondaryColor }]}>Filter aktiv</ThemedText>
             </View>
+
             <View style={[styles.statCard, { backgroundColor: isDark ? '#1C1C1E' : '#F2F3F5' }]}>
               <MaterialIcons name="school" size={18} color="#3B82F6" />
-              <ThemedText style={styles.statValue}>{selectedUniversity.canteens.length}</ThemedText>
+              <ThemedText style={styles.statValue}>{canteens.length}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: textSecondaryColor }]}>Mensen</ThemedText>
             </View>
           </View>

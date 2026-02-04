@@ -20,13 +20,14 @@ export const API_CONFIG = {
         RETRY_ATTEMPTS: 3,
     },
   
-  AI_API: {
-    BASE_URL: 'https://api.openai.com/v1',
-    API_KEY: getEnvVar('EXPO_PUBLIC_OPENAI_API_KEY', ''),
-    MODEL: 'gpt-4.1-mini',
-    MAX_TOKENS: 1000,
-    TEMPERATURE: 0.7,
-  },
+ AI_API: {
+   BASE_URL: 'https://api.x.ai/v1',
+   API_KEY: getEnvVar('EXPO_PUBLIC_OPENAI_API_KEY', ''),
+   MODEL: 'grok-2-latest',
+   MAX_TOKENS: 1000,
+   TEMPERATURE: 0.7,
+ },
+
 };
 
 export const ENDPOINTS = {
