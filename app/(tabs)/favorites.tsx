@@ -10,6 +10,7 @@ import { DishCard, onFavoritesChanged } from '@/components/dish-card';
 import { useFocusEffect } from '@react-navigation/native';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 
 const FAVORITES_STORAGE_KEY = '@mensa_app_favorites';
 
@@ -35,12 +36,19 @@ export default function FavoritesScreen() {
   const primaryColor = useThemeColor({}, 'primary');
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
   const errorColor = useThemeColor({}, 'error');
+  const { prefs } = useUserPreferences();
 
   const loadFavorites = useCallback(async () => {
     try {
       const stored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
       if (stored) {
-        setFavorites(JSON.parse(stored));
+        const parsed: Dish[] = JSON.parse(stored);
+        // Filter out corrupt entries that have neither id nor name
+        const valid = parsed.filter((d) => d.id || d.name);
+        if (valid.length !== parsed.length) {
+          await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(valid));
+        }
+        setFavorites(valid);
       } else {
         setFavorites([]);
       }
@@ -86,9 +94,12 @@ export default function FavoritesScreen() {
     return { avgPrice, topCategory, categories };
   }, [favorites]);
 
-  const removeSingleFavorite = async (dishId: string) => {
+  const removeSingleFavorite = async (dish: Dish) => {
     try {
-      const updated = favorites.filter((d) => d.id !== dishId);
+      const updated = favorites.filter((d) => {
+        if (d.id && dish.id) return d.id !== dish.id;
+        return d.name !== dish.name;
+      });
       await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(updated));
       setFavorites(updated);
     } catch (error) {
@@ -278,9 +289,9 @@ export default function FavoritesScreen() {
 
               {/* Dish cards with remove button */}
               <View style={styles.dishList}>
-                {filteredFavorites.map((dish) => (
-                  <View key={dish.id}>
-                    <DishCard dish={dish} />
+                {filteredFavorites.map((dish, index) => (
+                  <View key={`${dish.id}-${index}`}>
+                    <DishCard dish={dish} userPrefs={prefs} />
                     <TouchableOpacity
                       style={[styles.removeRow, { backgroundColor: isDark ? '#2C2C2E' : '#F9FAFB' }]}
                       onPress={() => {
@@ -292,7 +303,7 @@ export default function FavoritesScreen() {
                             {
                               text: 'Entfernen',
                               style: 'destructive',
-                              onPress: () => removeSingleFavorite(dish.id),
+                              onPress: () => removeSingleFavorite(dish),
                             },
                           ]
                         );

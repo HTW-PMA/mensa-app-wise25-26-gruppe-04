@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from './themed-text';
 import { HTWColors } from '@/constants/theme';
 import { useMenuData } from '@/hooks/useMenuData';
 import { MenuSection } from './menu-section';
 import { Menu } from '@/models';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 interface DailyMenuProps {
   date: Date;
@@ -23,10 +26,42 @@ const formatDate = (date: Date) => {
 
 export const DailyMenu: React.FC<DailyMenuProps> = ({ date, locationId, locationName }) => {
   // Menü laden (dein Hook liefert filteredMenu)
-  const { filteredMenu, loading, error } = useMenuData(date, locationId);
+  const { filteredMenu, loading, error, preferences } = useMenuData(date, locationId);
 
   // User Preferences laden (AsyncStorage)
   const { prefs, loadingPrefs } = useUserPreferences();
+
+  const colorScheme = useColorScheme() ?? 'light';
+  const isDark = colorScheme === 'dark';
+  const primaryColor = useThemeColor({}, 'primary');
+  const textSecondaryColor = useThemeColor({}, 'textSecondary');
+
+  const dishStats = useMemo(() => {
+    const dishes: any[] = filteredMenu?.dishes ?? [];
+    const total = dishes.length;
+    const veganCount = dishes.filter((d: any) =>
+      d.labels?.some((l: string) => l === 'vegan')
+    ).length;
+    const vegetarianCount = dishes.filter((d: any) =>
+      d.labels?.some((l: string) => l === 'vegetarian')
+    ).length;
+    const hasPrefs = (preferences?.dietaryRestrictions?.length ?? 0) > 0;
+    const matchCount = hasPrefs
+      ? dishes.filter((d: any) => {
+          const labels = (d.labels ?? []).map((l: any) => String(l).toLowerCase());
+          return preferences!.dietaryRestrictions.some((pref: string) => labels.includes(pref));
+        }).length
+      : 0;
+    const userAllergens: string[] = preferences?.allergens ?? [];
+    const hasAllergens = userAllergens.length > 0;
+    const allergenWarnCount = hasAllergens
+      ? dishes.filter((d: any) => {
+          const dishAllergens: string[] = (d.allergens ?? []).map((a: any) => String(a));
+          return userAllergens.some((a: string) => dishAllergens.includes(a));
+        }).length
+      : 0;
+    return { total, veganCount, vegetarianCount, matchCount, hasPrefs, allergenWarnCount, hasAllergens };
+  }, [filteredMenu, preferences]);
 
   if (loading || loadingPrefs) {
     return (
@@ -77,6 +112,40 @@ export const DailyMenu: React.FC<DailyMenuProps> = ({ date, locationId, location
 
       {locationName ? <ThemedText style={styles.locationText}>{locationName}</ThemedText> : null}
 
+      {/* Dish count summary */}
+      <View style={[styles.dishCountRow, { backgroundColor: isDark ? '#1C1C1E' : '#F2F3F5' }]}>
+        <View style={styles.dishCountItem}>
+          <MaterialIcons name="restaurant-menu" size={16} color={primaryColor} />
+          <ThemedText style={[styles.dishCountText, { color: primaryColor }]}>
+            {dishStats.total} {dishStats.total === 1 ? 'Gericht' : 'Gerichte'}
+          </ThemedText>
+        </View>
+        {dishStats.veganCount > 0 && (
+          <View style={styles.dishCountItem}>
+            <MaterialIcons name="eco" size={14} color="#4CAF50" />
+            <ThemedText style={[styles.dishCountText, { color: '#4CAF50' }]}>
+              {dishStats.veganCount} vegan
+            </ThemedText>
+          </View>
+        )}
+        {dishStats.vegetarianCount > 0 && (
+          <View style={styles.dishCountItem}>
+            <MaterialIcons name="grass" size={14} color="#66BB6A" />
+            <ThemedText style={[styles.dishCountText, { color: '#66BB6A' }]}>
+              {dishStats.vegetarianCount} vegetarisch
+            </ThemedText>
+          </View>
+        )}
+        {dishStats.hasPrefs && dishStats.matchCount > 0 && (
+          <View style={styles.dishCountItem}>
+            <MaterialIcons name="check-circle" size={14} color={primaryColor} />
+            <ThemedText style={[styles.dishCountText, { color: primaryColor }]}>
+              {dishStats.matchCount} passend
+            </ThemedText>
+          </View>
+        )}
+      </View>
+
       {dailyMenus.map((m) => (
         <MenuSection key={m.id} menu={m} userPrefs={prefs} />
       ))}
@@ -125,5 +194,25 @@ const styles = StyleSheet.create({
     marginTop: -14,
     marginBottom: 14,
     color: HTWColors.textLight,
+  },
+  dishCountRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  dishCountItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dishCountText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

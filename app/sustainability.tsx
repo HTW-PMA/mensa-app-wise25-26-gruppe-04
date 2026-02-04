@@ -16,6 +16,8 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useMenuData } from '@/hooks/useMenuData';
 import { Dish, DishLabel } from '@/models/Dish';
+import { calculateSustainabilityScore, getScoreColor } from '@/utils/sustainabilityScore';
+import { UNIVERSITIES } from '@/constants/universities';
 
 const LABEL_CONFIG: Record<string, { icon: React.ComponentProps<typeof MaterialIcons>['name']; text: string }> = {
   [DishLabel.VEGAN]: { icon: 'eco', text: 'Vegan' },
@@ -35,44 +37,25 @@ const TIPS = [
   'Fair-Trade-Produkte sichern gerechte Loehne fuer Produzenten in Entwicklungslaendern.',
 ];
 
-function getDishScore(dish: Dish): number {
-  const co2 = dish.sustainability?.co2Bilanz;
-  if (co2 != null) {
-    if (co2 <= 200) return 5;
-    if (co2 <= 500) return 4;
-    if (co2 <= 1000) return 3;
-    if (co2 <= 1500) return 2;
-    return 1;
-  }
-  const labels = dish.labels ?? [];
-  let score = 2;
-  if (labels.includes(DishLabel.VEGAN)) score = 5;
-  else if (labels.includes(DishLabel.VEGETARIAN)) score = 4;
-  if (labels.includes(DishLabel.ORGANIC)) score = Math.min(score + 1, 5);
-  if (labels.includes(DishLabel.REGIONAL)) score = Math.min(score + 1, 5);
-  return score;
-}
-
-function getScoreColor(score: number): string {
-  if (score >= 4) return '#4CAF50';
-  if (score === 3) return '#FFC107';
-  return '#EF4444';
-}
-
 export default function SustainabilityScreen() {
   const [locationId, setLocationId] = useState<string | null>(null);
   const [today] = useState(() => new Date());
   const colorScheme = useColorScheme() ?? 'light';
   const isDark = colorScheme === 'dark';
 
-  useEffect(() => {
-    AsyncStorage.getItem('selected_university').then((val) => {
-      setLocationId(val || 'htw');
-    });
+  const defaultCanteenId = useMemo(() => {
+    const htw = UNIVERSITIES.find((u) => u.id === 'htw');
+    return htw?.canteens.find((c) => c.hasMenu)?.id ?? '';
   }, []);
 
-  const { menu, loading, error } = useMenuData(today, locationId || 'htw');
+  useEffect(() => {
+    AsyncStorage.getItem('selected_canteen').then((val) => {
+      setLocationId(val || defaultCanteenId);
+    });
+  }, [defaultCanteenId]);
+
   const isReady = locationId !== null;
+  const { menu, loading, error } = useMenuData(today, locationId || defaultCanteenId);
 
   const cardColor = useThemeColor({}, 'surface');
   const primaryColor = useThemeColor({}, 'primary');
@@ -124,15 +107,15 @@ export default function SustainabilityScreen() {
     );
   };
 
-  const renderDishCard = (dish: Dish) => {
+  const renderDishCard = (dish: Dish, index: number) => {
     const labels = dish.labels ?? [];
     const co2 = dish.sustainability?.co2Bilanz;
     const water = dish.sustainability?.waterBilanz;
-    const score = getDishScore(dish);
+    const score = calculateSustainabilityScore(dish).score;
 
     return (
       <View
-        key={dish.id}
+        key={`${dish.id}-${index}`}
         style={[styles.dishCard, { backgroundColor: cardColor }]}
       >
         <View style={styles.dishHeader}>

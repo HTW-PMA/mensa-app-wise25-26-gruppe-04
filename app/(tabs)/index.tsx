@@ -145,26 +145,19 @@ export default function HomeScreen() {
     return canteens[0];
   }, [selectedCanteenId, canteens]);
 
-  // Load saved selection
-  useEffect(() => {
-    const loadSelection = async () => {
-      try {
-        const [savedUni, savedCanteen] = await Promise.all([
-          AsyncStorage.getItem(UNIVERSITY_STORAGE_KEY),
-          AsyncStorage.getItem(CANTEEN_STORAGE_KEY),
-        ]);
-        if (savedUni) setSelectedUniversityId(savedUni);
-        if (savedCanteen) setSelectedCanteenId(savedCanteen);
-      } catch {
-        // ignore
-      }
-    };
-    loadSelection();
-  }, []);
-
-  // Load favorites count on focus
+  // Reload selection + favorites on every tab focus
   useFocusEffect(
     useCallback(() => {
+      // University & canteen selection
+      Promise.all([
+        AsyncStorage.getItem(UNIVERSITY_STORAGE_KEY),
+        AsyncStorage.getItem(CANTEEN_STORAGE_KEY),
+      ]).then(([savedUni, savedCanteen]) => {
+        if (savedUni) setSelectedUniversityId(savedUni);
+        if (savedCanteen) setSelectedCanteenId(savedCanteen);
+      }).catch(() => { /* ignore */ });
+
+      // Favorites count
       AsyncStorage.getItem(FAVORITES_STORAGE_KEY).then((raw) => {
         if (raw) {
           try {

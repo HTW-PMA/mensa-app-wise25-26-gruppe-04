@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Menu } from '@/models';
 import { MensaOfflineService } from '@/services/offline/mensaOfflineService';
+import { onPreferencesChanged } from './useUserPreferences';
 
 const STORAGE_KEY = '@mensa_app_preferences';
 
@@ -32,17 +33,19 @@ const DIETARY_IDS = new Set([
 
 const ALLERGEN_IDS = new Set([
   'gluten',
-  'milk',
+  'crustaceans',
   'eggs',
   'fish',
-  'shellfish',
-  'nuts',
   'peanuts',
-  'soy',
+  'soybeans',
+  'milk',
+  'nuts',
   'celery',
   'mustard',
   'sesame',
-  'sulfites',
+  'sulphites',
+  'lupin',
+  'molluscs',
 ]);
 
 // Hilfsfunktion: Preferences laden
@@ -101,58 +104,54 @@ function getDishMeta(dish: any): { dietary: string[]; allergens: string[]; price
   return { dietary, allergens, price };
 }
 
-// Filter-Regeln:
-// - dietaryRestrictions: nur Gerichte behalten, die alle ausgewählten “Diet”-Labels erfüllen
-// - allergens: Gerichte entfernen, die ein ausgewähltes Allergen enthalten
-// - maxPrice: optional (falls Preis-Feld vorhanden)
-function dishPassesFilters(dish: any, prefs: UserPreferences): boolean {
+// Check if a dish matches the user's dietary preferences
+function dishMatchesDiet(dish: any, prefs: UserPreferences): boolean {
+  if (prefs.dietaryRestrictions.length === 0) return false;
   const meta = getDishMeta(dish);
-
-  // Allergene: wenn User sagt "ich habe X", dann darf Gericht X NICHT enthalten
-  if (prefs.allergens.length > 0) {
-    const hit = prefs.allergens.some((a) => meta.allergens.includes(a));
-    if (hit) return false;
-  }
-
-  // Ernährungspräferenzen (simple): alle gewählten Labels müssen vorhanden sein
-  if (prefs.dietaryRestrictions.length > 0) {
-    const ok = prefs.dietaryRestrictions.every((d) => meta.dietary.includes(d));
-    if (!ok) return false;
-  }
-
-  // Preis (nur wenn wir überhaupt Preis erkennen)
-  if (typeof meta.price === 'number' && meta.price > prefs.maxPrice) {
-    return false;
-  }
-
-  return true;
+  return prefs.dietaryRestrictions.every((d) => meta.dietary.includes(d));
 }
 
-// Menü “durchfiltern” – wir versuchen typische Strukturen zu behandeln.
-// Falls eure Struktur anders ist, passen wir das gleich an.
-function filterMenu(menu: Menu, prefs: UserPreferences): Menu {
-  const m: any = menu;
+// Check if a dish contains any of the user's selected allergens
+function dishHasUserAllergen(dish: any, prefs: UserPreferences): boolean {
+  if (prefs.allergens.length === 0) return false;
+  const dishAllergens = Array.isArray(dish?.allergens)
+    ? dish.allergens.map((a: any) => String(a))
+    : [];
+  if (dishAllergens.length === 0) return false;
+  return prefs.allergens.some((a) => dishAllergens.includes(a));
+}
 
-  // Häufig: menu.items oder menu.dishes
+// Sort dishes: preference matches first, then neutral, then allergen warnings last
+function sortMenu(menu: Menu, prefs: UserPreferences): Menu {
+  const m: any = menu;
+  const hasDietFilters = prefs.dietaryRestrictions.length > 0;
+  const hasAllergenFilters = prefs.allergens.length > 0;
+
+  const sortDishes = (dishes: any[]) => {
+    if (!hasDietFilters && !hasAllergenFilters) return dishes;
+    return [...dishes].sort((a, b) => {
+      const aRank = dishMatchesDiet(a, prefs) ? 0 : dishHasUserAllergen(a, prefs) ? 2 : 1;
+      const bRank = dishMatchesDiet(b, prefs) ? 0 : dishHasUserAllergen(b, prefs) ? 2 : 1;
+      return aRank - bRank;
+    });
+  };
+
   if (Array.isArray(m?.items)) {
-    return { ...(menu as any), items: m.items.filter((dish: any) => dishPassesFilters(dish, prefs)) };
+    return { ...(menu as any), items: sortDishes(m.items) };
   }
   if (Array.isArray(m?.dishes)) {
-    return { ...(menu as any), dishes: m.dishes.filter((dish: any) => dishPassesFilters(dish, prefs)) };
+    return { ...(menu as any), dishes: sortDishes(m.dishes) };
   }
-
-  // Häufig: menu.categories -> category.items
   if (Array.isArray(m?.categories)) {
     const categories = m.categories.map((cat: any) => {
       if (Array.isArray(cat?.items)) {
-        return { ...cat, items: cat.items.filter((dish: any) => dishPassesFilters(dish, prefs)) };
+        return { ...cat, items: sortDishes(cat.items) };
       }
       return cat;
     });
     return { ...(menu as any), categories };
   }
 
-  // Unknown Struktur -> unverändert zurückgeben
   return menu;
 }
 
@@ -168,16 +167,20 @@ export function useMenuData(date?: Date, locationId: string = 'htw') {
   // optional: UI kann anzeigen “aus Cache”
   const [source, setSource] = useState<'network' | 'cache' | null>(null);
 
-  // Preferences laden + bei Änderungen (z.B. wenn man im Settings Screen was toggelt)
-  // -> Wir triggern neu über AsyncStorage nicht automatisch.
-  // Dafür machen wir gleich einen "reloadPreferences" den du auf Settings-Navigation nutzen kannst.
   const reloadPreferences = async () => {
     const p = await loadPrefs();
     setPreferences(p);
     if (menu) {
-      setFilteredMenu(filterMenu(menu, p));
+      setFilteredMenu(sortMenu(menu, p));
     }
   };
+
+  // Automatically reload when preferences change from settings
+  useEffect(() => {
+    return onPreferencesChanged(() => {
+      reloadPreferences();
+    });
+  }, [menu]);
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -194,7 +197,7 @@ export function useMenuData(date?: Date, locationId: string = 'htw') {
         setSource(result.source);
 
         setPreferences(prefs);
-        setFilteredMenu(filterMenu(result.data, prefs));
+        setFilteredMenu(sortMenu(result.data, prefs));
       } catch (err) {
         setError(err as Error);
       } finally {
@@ -219,7 +222,7 @@ export function useMenuData(date?: Date, locationId: string = 'htw') {
       setSource(result.source);
 
       setPreferences(prefs);
-      setFilteredMenu(filterMenu(result.data, prefs));
+      setFilteredMenu(sortMenu(result.data, prefs));
     } catch (err) {
       setError(err as Error);
     } finally {

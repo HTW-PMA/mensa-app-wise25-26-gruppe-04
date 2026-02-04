@@ -30,17 +30,19 @@ const DIETARY_OPTIONS: { id: string; label: string; icon: React.ComponentProps<t
 
 const ALLERGEN_OPTIONS: { id: string; label: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }[] = [
   { id: 'gluten', label: 'Gluten', icon: 'grain' },
-  { id: 'milk', label: 'Milch', icon: 'water-drop' },
+  { id: 'crustaceans', label: 'Krebstiere', icon: 'set-meal' },
   { id: 'eggs', label: 'Eier', icon: 'egg' },
   { id: 'fish', label: 'Fisch', icon: 'set-meal' },
-  { id: 'shellfish', label: 'Schalentiere', icon: 'set-meal' },
-  { id: 'nuts', label: 'Nuesse', icon: 'forest' },
   { id: 'peanuts', label: 'Erdnuesse', icon: 'forest' },
-  { id: 'soy', label: 'Soja', icon: 'spa' },
+  { id: 'soybeans', label: 'Soja', icon: 'spa' },
+  { id: 'milk', label: 'Milch / Laktose', icon: 'water-drop' },
+  { id: 'nuts', label: 'Schalenfruechte', icon: 'forest' },
   { id: 'celery', label: 'Sellerie', icon: 'grass' },
   { id: 'mustard', label: 'Senf', icon: 'local-florist' },
   { id: 'sesame', label: 'Sesam', icon: 'grain' },
-  { id: 'sulfites', label: 'Sulfite', icon: 'science' },
+  { id: 'sulphites', label: 'Sulfite', icon: 'science' },
+  { id: 'lupin', label: 'Lupinen', icon: 'spa' },
+  { id: 'molluscs', label: 'Weichtiere', icon: 'set-meal' },
 ];
 
 export default function SettingsScreen() {
@@ -131,8 +133,8 @@ export default function SettingsScreen() {
     try {
       await sendTestNotification();
       Alert.alert('Erfolg', 'Test-Benachrichtigung wurde gesendet.');
-    } catch {
-      Alert.alert('Fehler', 'Test-Benachrichtigung konnte nicht gesendet werden.');
+    } catch (error: any) {
+      Alert.alert('Fehler', error?.message ?? 'Test-Benachrichtigung konnte nicht gesendet werden.');
     }
   };
 

@@ -17,6 +17,19 @@ const DEFAULT_PREFS: UserPreferences = {
   notificationsEnabled: false,
 };
 
+// Simple event emitter so settings screen can notify other screens of changes
+type Listener = () => void;
+const prefsListeners = new Set<Listener>();
+
+export function notifyPreferencesChanged() {
+  prefsListeners.forEach((fn) => fn());
+}
+
+export function onPreferencesChanged(listener: Listener): () => void {
+  prefsListeners.add(listener);
+  return () => { prefsListeners.delete(listener); };
+}
+
 export function useUserPreferences() {
   const [prefs, setPrefs] = useState<UserPreferences>(DEFAULT_PREFS);
   const [loadingPrefs, setLoadingPrefs] = useState(true);
@@ -33,6 +46,13 @@ export function useUserPreferences() {
 
   useEffect(() => {
     load();
+  }, []);
+
+  // Re-load whenever preferences are changed from settings
+  useEffect(() => {
+    return onPreferencesChanged(() => {
+      load();
+    });
   }, []);
 
   return { prefs, loadingPrefs, reloadPrefs: load };

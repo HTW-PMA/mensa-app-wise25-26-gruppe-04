@@ -2,6 +2,7 @@
   "expo": {
     "name": "UniMensa Berlin",
     "slug": "unimensa-berlin",
+    "scheme": "unimensa",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",

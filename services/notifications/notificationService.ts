@@ -1,11 +1,15 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MensaApiService } from '../api/mensaApi';
 
 const FAVORITES_STORAGE_KEY = '@mensa_app_favorites';
 const STORAGE_KEY = '@mensa_app_preferences';
+
+/** Returns true when running inside Expo Go (where push notifications are unsupported since SDK 53). */
+const isExpoGo = Constants.appOwnership === 'expo';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -19,11 +23,10 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Request notification permissions
+ * Ensure notification permissions are granted (needed for both local and push notifications).
+ * Returns true if permissions are granted.
  */
-export async function registerForPushNotificationsAsync(): Promise<string | undefined> {
-  let token;
-
+async function ensureNotificationPermissions(): Promise<boolean> {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'default',
@@ -33,27 +36,38 @@ export async function registerForPushNotificationsAsync(): Promise<string | unde
     });
   }
 
-  if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    
-    if (finalStatus !== 'granted') {
-      alert('Benachrichtigungen wurden nicht erlaubt!');
-      return;
-    }
-    
-    token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log('Push token:', token);
-  } else {
-    alert('Push-Benachrichtigungen funktionieren nur auf echten Geräten');
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  if (existingStatus === 'granted') return true;
+
+  const { status } = await Notifications.requestPermissionsAsync();
+  return status === 'granted';
+}
+
+/**
+ * Request notification permissions and register for push notifications.
+ * Push token registration is skipped in Expo Go (unsupported since SDK 53).
+ */
+export async function registerForPushNotificationsAsync(): Promise<string | undefined> {
+  const granted = await ensureNotificationPermissions();
+  if (!granted) {
+    console.log('Benachrichtigungen wurden nicht erlaubt.');
+    return;
   }
 
-  return token;
+  // Push token registration is not supported in Expo Go since SDK 53
+  if (isExpoGo) {
+    console.log('Push token registration skipped in Expo Go. Local notifications still work.');
+    return;
+  }
+
+  if (Device.isDevice) {
+    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log('Push token:', token);
+    return token;
+  }
+
+  console.log('Push-Benachrichtigungen funktionieren nur auf echten Geräten.');
+  return;
 }
 
 /**
@@ -140,21 +154,23 @@ export async function checkAndNotifyFavorites() {
 }
 
 /**
- * Send test notification
+ * Send test notification (local – works in Expo Go too).
+ * Throws if permissions are missing so callers can show an error.
  */
 export async function sendTestNotification() {
-  try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Test-Benachrichtigung 🔔',
-        body: 'Push-Benachrichtigungen funktionieren!',
-        data: { type: 'test' },
-      },
-      trigger: null, // Send immediately
-    });
-  } catch (error) {
-    console.error('Error sending test notification:', error);
+  const granted = await ensureNotificationPermissions();
+  if (!granted) {
+    throw new Error('Benachrichtigungen wurden nicht erlaubt. Bitte in den Geräte-Einstellungen aktivieren.');
   }
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Test-Benachrichtigung 🔔',
+      body: 'Push-Benachrichtigungen funktionieren!',
+      data: { type: 'test' },
+    },
+    trigger: null, // Send immediately
+  });
 }
 
 /**
