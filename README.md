@@ -167,3 +167,5 @@ Gruppe 04 - HTW Berlin
 ## 📄 Lizenz
 
 Dieses Projekt ist Teil eines Universitätsprojekts an der HTW Berlin.
+
+
