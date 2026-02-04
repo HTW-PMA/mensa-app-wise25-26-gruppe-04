@@ -5,7 +5,7 @@ import { API_CONFIG } from '@/config/api.config';
 
 // API Configuration - Loaded from environment variables
 const OPENAI_API_KEY = API_CONFIG.AI_API.API_KEY;
-const OPENAI_ENDPOINT = `${API_CONFIG.AI_API.BASE_URL}/chat/completions`;
+const OPENAI_ENDPOINT = `${API_CONFIG.AI_API.BASE_URL}/chat`;
 const MODEL_NAME = API_CONFIG.AI_API.MODEL;
 
 const STORAGE_KEY = '@mensa_app_preferences';
@@ -20,9 +20,6 @@ export async function getAiResponse(
     history: { role: 'user' | 'assistant', content: string }[] = [],
     functions?: any[]
 ): Promise<string> {
-    if (!OPENAI_API_KEY || OPENAI_API_KEY.length < 20) {
-        return 'Bitte setze deinen OpenAI API-Key in der .env Datei (EXPO_PUBLIC_OPENAI_API_KEY)';
-    }
 
     try {
         const requestBody: any = {
@@ -48,7 +45,7 @@ export async function getAiResponse(
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                // Authorization Header entfernen!
             },
             body: JSON.stringify(requestBody),
         });

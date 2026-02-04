@@ -21,8 +21,8 @@ export const API_CONFIG = {
     },
 
     AI_API: {
-        BASE_URL: 'https://api.openai.com/v1',
-        API_KEY: getEnvVar('EXPO_PUBLIC_OPENAI_API_KEY', '' ),
+        BASE_URL: 'https://mensa-app-backend.vercel.app/api',
+        API_KEY: "",
         MODEL: 'gpt-4o-mini',
         MAX_TOKENS: 1000,
         TEMPERATURE: 0.7,
