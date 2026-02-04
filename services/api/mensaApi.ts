@@ -118,6 +118,9 @@ export class MensaApiService {
      * - Wenn die ID nicht konfiguriert ist, versuchen wir automatisch eine HTW-Mensa zu finden.
      */
     private static async getCanteenId(locationId: string = 'htw'): Promise<string | undefined> {
+        // If locationId is already a canteen API ID (24-char hex / MongoDB ObjectId), use directly
+        if (/^[a-f0-9]{24}$/i.test(locationId)) return locationId;
+
         // Wenn explizit konfiguriert (z.B. für Debugging), für die Default-Location (htw) bevorzugen
         if (CONFIGURED_CANTEEN_ID && (!locationId || locationId === 'htw')) return CONFIGURED_CANTEEN_ID;
 

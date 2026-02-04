@@ -2,78 +2,191 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MensaApiService } from '../api/mensaApi';
 import { Dish } from '@/models/Dish';
 import { API_CONFIG } from '@/config/api.config';
+import { notifyPreferencesChanged } from '@/hooks/useUserPreferences';
+import { UNIVERSITIES, University, Canteen } from '@/constants/universities';
 
-// API Configuration - Loaded from environment variables
-const OPENAI_API_KEY = API_CONFIG.AI_API.API_KEY;
 const OPENAI_ENDPOINT = `${API_CONFIG.AI_API.BASE_URL}/chat`;
 const MODEL_NAME = API_CONFIG.AI_API.MODEL;
 
 const STORAGE_KEY = '@mensa_app_preferences';
 const FAVORITES_STORAGE_KEY = '@mensa_app_favorites';
+const UNIVERSITY_STORAGE_KEY = 'selected_university';
+const CANTEEN_STORAGE_KEY = 'selected_canteen';
+
+// -------------------------------------------------------------------
+// Helpers
+// -------------------------------------------------------------------
+
+function formatDish(dish: Dish): string {
+    const parts: string[] = [dish.name];
+    if (dish.labels && dish.labels.length > 0) {
+        parts.push(`[${dish.labels.join(', ')}]`);
+    }
+    parts.push(`${(dish.price.student / 100).toFixed(2)}€`);
+    if (dish.allergens && dish.allergens.length > 0) {
+        parts.push(`Allergene: ${dish.allergens.join(', ')}`);
+    }
+    if (dish.sustainability?.co2Bilanz != null) {
+        parts.push(`CO2: ${dish.sustainability.co2Bilanz}g`);
+    }
+    return parts.join(' | ');
+}
+
+async function loadPreferences(): Promise<{
+    dietaryRestrictions: string[];
+    allergens: string[];
+    maxPrice: number;
+    notificationsEnabled: boolean;
+}> {
+    try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (stored) return JSON.parse(stored);
+    } catch { /* ignore */ }
+    return { dietaryRestrictions: [], allergens: [], maxPrice: 10, notificationsEnabled: false };
+}
 
 /**
- * Base function to communicate with the OpenAI Chat API using fetch.
+ * Load the user's selected university and canteen from AsyncStorage.
  */
+async function loadSelectedLocation(): Promise<{
+    university: University;
+    canteen: Canteen;
+}> {
+    const defaultUni = UNIVERSITIES[0];
+    const defaultCanteen = defaultUni.canteens.find((c) => c.hasMenu) || defaultUni.canteens[0];
+
+    try {
+        const [savedUniId, savedCanteenId] = await Promise.all([
+            AsyncStorage.getItem(UNIVERSITY_STORAGE_KEY),
+            AsyncStorage.getItem(CANTEEN_STORAGE_KEY),
+        ]);
+
+        const university = (savedUniId && UNIVERSITIES.find((u) => u.id === savedUniId)) || defaultUni;
+
+        let canteen: Canteen | undefined;
+        if (savedCanteenId) {
+            canteen = university.canteens.find((c) => c.id === savedCanteenId);
+        }
+        if (!canteen) {
+            canteen = university.canteens.find((c) => c.hasMenu) || university.canteens[0];
+        }
+
+        return { university, canteen };
+    } catch {
+        return { university: defaultUni, canteen: defaultCanteen };
+    }
+}
+
+async function fetchMenuText(date: Date, canteenId: string, canteenName: string): Promise<string> {
+    try {
+        const menu = await MensaApiService.getDailyMenu(date, canteenId);
+        if (!menu || menu.dishes.length === 0) {
+            return `Keine Gerichte verfügbar für ${date.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })} (${canteenName}).`;
+        }
+        const header = date.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' });
+        const lines = menu.dishes.map((d, i) => `${i + 1}. ${formatDish(d)}`);
+        return `Menü ${header} – ${canteenName}:\n${lines.join('\n')}`;
+    } catch (error) {
+        return `Menüdaten für ${canteenName} konnten nicht geladen werden: ${error instanceof Error ? error.message : 'Unbekannt'}`;
+    }
+}
+
+async function fetchFavoritesText(): Promise<string> {
+    try {
+        const stored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
+        if (!stored) return 'Keine Favoriten gespeichert.';
+        const favorites = JSON.parse(stored);
+        if (!Array.isArray(favorites) || favorites.length === 0) return 'Keine Favoriten gespeichert.';
+        return `Favoriten des Nutzers: ${favorites.map((f: any) => f.name || f).join(', ')}`;
+    } catch {
+        return 'Favoriten konnten nicht geladen werden.';
+    }
+}
+
+// -------------------------------------------------------------------
+// Action-Tag Parsing & Execution
+// -------------------------------------------------------------------
+
+const ACTION_REGEX = /\[ACTION:(set_preference|set_allergen):(\w+):(true|false)\]/g;
+
+async function executeActions(text: string): Promise<string> {
+    const actions = [...text.matchAll(ACTION_REGEX)];
+    if (actions.length === 0) return text;
+
+    const prefs = await loadPreferences();
+    let changed = false;
+
+    for (const match of actions) {
+        const [, action, value, enabledStr] = match;
+        const enabled = enabledStr === 'true';
+
+        if (action === 'set_preference') {
+            if (enabled && !prefs.dietaryRestrictions.includes(value)) {
+                prefs.dietaryRestrictions.push(value);
+                changed = true;
+            } else if (!enabled) {
+                const before = prefs.dietaryRestrictions.length;
+                prefs.dietaryRestrictions = prefs.dietaryRestrictions.filter((p: string) => p !== value);
+                if (prefs.dietaryRestrictions.length !== before) changed = true;
+            }
+        } else if (action === 'set_allergen') {
+            if (enabled && !prefs.allergens.includes(value)) {
+                prefs.allergens.push(value);
+                changed = true;
+            } else if (!enabled) {
+                const before = prefs.allergens.length;
+                prefs.allergens = prefs.allergens.filter((a: string) => a !== value);
+                if (prefs.allergens.length !== before) changed = true;
+            }
+        }
+    }
+
+    if (changed) {
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+        notifyPreferencesChanged();
+    }
+
+    // Remove action tags from visible text
+    return text.replace(ACTION_REGEX, '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// -------------------------------------------------------------------
+// Core AI Communication
+// -------------------------------------------------------------------
+
 export async function getAiResponse(
     systemPrompt: string,
     userMessage: string,
-    history: { role: 'user' | 'assistant', content: string }[] = [],
-    functions?: any[]
+    history: { role: 'user' | 'assistant'; content: string }[] = []
 ): Promise<string> {
-
     try {
-        const requestBody: any = {
+        const requestBody = {
             model: MODEL_NAME,
             messages: [
                 { role: 'system', content: systemPrompt },
-                ...history.map((msg) => ({
-                    role: msg.role,
-                    content: msg.content,
-                })),
+                ...history.map((msg) => ({ role: msg.role, content: msg.content })),
                 { role: 'user', content: userMessage },
             ],
             temperature: 0.7,
-            max_tokens: 1000,
+            max_tokens: 1500,
         };
-
-        if (functions && functions.length > 0) {
-            requestBody.functions = functions;
-            requestBody.function_call = 'auto';
-        }
 
         const response = await fetch(OPENAI_ENDPOINT, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                // Authorization Header entfernen!
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
             const errorText = await response.text();
             console.error('[AI Service] API Error:', errorText);
-            return `Fehler: API-Anfrage fehlgeschlagen (${response.status}). ${errorText}`;
+            return `Fehler: API-Anfrage fehlgeschlagen (${response.status}).`;
         }
 
         const data = await response.json();
 
         if (data.choices && data.choices.length > 0) {
-            const message = data.choices[0].message;
-
-            // Check if function call was requested
-            if (message.function_call) {
-                const functionName = message.function_call.name;
-                const functionArgs = JSON.parse(message.function_call.arguments);
-
-                // Execute the function
-                const functionResult = await executeFunctionCall(functionName, functionArgs);
-
-                // Return the result
-                return functionResult;
-            }
-
-            return message.content;
+            return data.choices[0].message.content || 'Keine Antwort erhalten.';
         }
 
         return 'Keine Antwort von der KI erhalten.';
@@ -83,162 +196,134 @@ export async function getAiResponse(
     }
 }
 
-/**
- * Execute function calls from AI
- */
-async function executeFunctionCall(functionName: string, args: any): Promise<string> {
-    try {
-        switch (functionName) {
-            case 'get_menu_for_date':
-                return await getMenuForDate(args.date);
+// -------------------------------------------------------------------
+// Main chat function
+// -------------------------------------------------------------------
 
-            case 'set_dietary_preference':
-                return await setDietaryPreference(args.preference, args.enabled);
+export async function answerMensaQuestion(
+    question: string,
+    history: { role: 'user' | 'assistant'; content: string }[] = []
+): Promise<string> {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const todayReadable = today.toLocaleDateString('de-DE', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+    });
 
-            case 'set_allergen':
-                return await setAllergen(args.allergen, args.enabled);
+    // --- Load user's selected location ---
+    const { university, canteen } = await loadSelectedLocation();
 
-            case 'check_favorite_availability':
-                return await checkFavoriteAvailability();
+    // --- Pre-fetch context data in parallel ---
+    const questionLower = question.toLowerCase();
 
-            default:
-                return `Unbekannte Funktion: ${functionName}`;
-        }
-    } catch (error) {
-        console.error('[AI Service] Function execution error:', error);
-        return `Fehler beim Ausführen der Funktion: ${error instanceof Error ? error.message : 'Unbekannt'}`;
+    // Determine which dates to fetch
+    const datesToFetch: Date[] = [today];
+
+    const tomorrowKeywords = ['morgen', 'nächst', 'naechst'];
+    const weekKeywords = ['woche', 'übermorgen', 'uebermorgen', 'freitag', 'donnerstag', 'mittwoch', 'dienstag', 'montag'];
+
+    if (tomorrowKeywords.some((k) => questionLower.includes(k))) {
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        datesToFetch.push(tomorrow);
     }
-}
 
-/**
- * Get menu for a specific date
- */
-async function getMenuForDate(dateString: string): Promise<string> {
-    try {
-        const date = new Date(dateString);
-        const menu = await MensaApiService.getDailyMenu(date);
-
-        if (!menu || menu.dishes.length === 0) {
-            return `Für den ${date.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })} sind keine Menüdaten verfügbar.`;
-        }
-
-        const dishList = menu.dishes
-            .map((dish: Dish) => `- ${dish.name} (${(dish.price.student / 100).toFixed(2)}€)`)
-            .join('\n');
-
-        return `Menü für ${date.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })}:\n\n${dishList}`;
-    } catch (error) {
-        return `Fehler beim Laden des Menüs: ${error instanceof Error ? error.message : 'Unbekannt'}`;
-    }
-}
-
-/**
- * Set dietary preference
- */
-async function setDietaryPreference(preference: string, enabled: boolean): Promise<string> {
-    try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        const preferences = stored ? JSON.parse(stored) : { dietaryRestrictions: [], allergens: [], maxPrice: 10 };
-
-        if (enabled) {
-            if (!preferences.dietaryRestrictions.includes(preference)) {
-                preferences.dietaryRestrictions.push(preference);
-            }
-        } else {
-            preferences.dietaryRestrictions = preferences.dietaryRestrictions.filter((p: string) => p !== preference);
-        }
-
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
-
-        return `Ernährungspräferenz "${preference}" wurde ${enabled ? 'aktiviert' : 'deaktiviert'}.`;
-    } catch (error) {
-        return `Fehler beim Setzen der Präferenz: ${error instanceof Error ? error.message : 'Unbekannt'}`;
-    }
-}
-
-/**
- * Set allergen
- */
-async function setAllergen(allergen: string, enabled: boolean): Promise<string> {
-    try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        const preferences = stored ? JSON.parse(stored) : { dietaryRestrictions: [], allergens: [], maxPrice: 10 };
-
-        if (enabled) {
-            if (!preferences.allergens.includes(allergen)) {
-                preferences.allergens.push(allergen);
-            }
-        } else {
-            preferences.allergens = preferences.allergens.filter((a: string) => a !== allergen);
-        }
-
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
-
-        return `Allergen "${allergen}" wurde ${enabled ? 'hinzugefügt' : 'entfernt'}.`;
-    } catch (error) {
-        return `Fehler beim Setzen des Allergens: ${error instanceof Error ? error.message : 'Unbekannt'}`;
-    }
-}
-
-/**
- * Check when favorite dishes are available
- */
-async function checkFavoriteAvailability(): Promise<string> {
-    try {
-        const stored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
-        if (!stored) {
-            return 'Du hast noch keine Favoriten gespeichert.';
-        }
-
-        const favorites = JSON.parse(stored);
-        if (favorites.length === 0) {
-            return 'Du hast noch keine Favoriten gespeichert.';
-        }
-
-        // Check next 7 days
-        const results: string[] = [];
-        const today = new Date();
-
-        for (let i = 0; i < 7; i++) {
-            const checkDate = new Date(today);
-            checkDate.setDate(today.getDate() + i);
-
-            try {
-                const menu = await MensaApiService.getDailyMenu(checkDate);
-                if (menu && menu.dishes.length > 0) {
-                    const matchingDishes = menu.dishes.filter((dish: Dish) =>
-                        favorites.some((fav: any) => fav.name === dish.name)
-                    );
-
-                    if (matchingDishes.length > 0) {
-                        const dateStr = checkDate.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' });
-                        const dishNames = matchingDishes.map((d: Dish) => d.name).join(', ');
-                        results.push(`${dateStr}: ${dishNames}`);
-                    }
+    if (weekKeywords.some((k) => questionLower.includes(k))) {
+        for (let i = 1; i <= 5; i++) {
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            if (d.getDay() >= 1 && d.getDay() <= 5) {
+                if (!datesToFetch.some((existing) => existing.toDateString() === d.toDateString())) {
+                    datesToFetch.push(d);
                 }
-            } catch {
-                // Skip this day if error
             }
         }
-
-        if (results.length === 0) {
-            return 'In den nächsten 7 Tagen sind keine deiner Favoriten verfügbar.';
-        }
-
-        return `Deine Favoriten sind verfügbar:\n\n${results.join('\n')}`;
-    } catch (error) {
-        return `Fehler beim Prüfen der Favoriten: ${error instanceof Error ? error.message : 'Unbekannt'}`;
     }
+
+    const [prefs, favorites, ...menuTexts] = await Promise.all([
+        loadPreferences(),
+        fetchFavoritesText(),
+        ...datesToFetch.map((d) => fetchMenuText(d, canteen.id, canteen.fullName)),
+    ]);
+
+    const menuContext = menuTexts.join('\n\n');
+
+    const dietLabel = prefs.dietaryRestrictions.length > 0
+        ? prefs.dietaryRestrictions.join(', ')
+        : 'keine';
+    const allergenLabel = prefs.allergens.length > 0
+        ? prefs.allergens.join(', ')
+        : 'keine';
+
+    // Build available universities list for context
+    const uniList = UNIVERSITIES.map((u) => `${u.name} (${u.canteens.filter((c) => c.hasMenu).length} Mensen)`).join(', ');
+
+    const systemPrompt = `Du bist der KI-Assistent der UniMensa Berlin App – einer App für ALLE Berliner Universitäten und Hochschulen.
+Heute ist ${todayReadable} (${todayStr}).
+
+AKTUELL AUSGEWÄHLTE MENSA:
+- Universität: ${university.name}
+- Mensa: ${canteen.fullName}
+- Adresse: ${canteen.address}
+
+VERFÜGBARE UNIVERSITÄTEN IN DER APP:
+${uniList}
+
+AKTUELLE MENÜDATEN für "${canteen.fullName}" (direkt aus der Mensa-API):
+${menuContext}
+
+NUTZER-EINSTELLUNGEN:
+- Ernährungspräferenzen: ${dietLabel}
+- Allergen-Warnungen: ${allergenLabel}
+${favorites}
+
+DEINE AUFGABEN:
+1. Beantworte Fragen zu Menüs basierend auf den obigen echten Menüdaten. Erfinde KEINE Gerichte.
+2. Die Daten beziehen sich auf die aktuell ausgewählte Mensa "${canteen.fullName}" der ${university.name}.
+3. Gib personalisierte Empfehlungen basierend auf den Nutzer-Einstellungen.
+4. Wenn Allergene des Nutzers in einem Gericht vorkommen, weise DEUTLICH darauf hin.
+5. Öffnungszeiten: Mo-Fr 11:00-14:30, Sa-So geschlossen.
+6. Wenn der Nutzer nach einer anderen Uni/Mensa fragt, erkläre, dass er die Mensa über das Menü-Tab oben wechseln kann.
+7. Erkläre Gerichte, Zutaten, Nährwerte und Allergene wenn danach gefragt wird.
+
+EINSTELLUNGEN ÄNDERN:
+Wenn der Nutzer seine Einstellungen ändern möchte (z.B. "Ich bin vegan", "Ich habe eine Glutenunverträglichkeit", "Entferne vegan"), füge am Ende deiner Antwort den passenden Action-Tag ein:
+
+Ernährungspräferenzen (vegetarian, vegan, glutenfree, lactosefree, halal, kosher):
+[ACTION:set_preference:WERT:true] zum Aktivieren
+[ACTION:set_preference:WERT:false] zum Deaktivieren
+
+Allergen-Warnungen (gluten, milk, eggs, fish, shellfish, nuts, peanuts, soy, celery, mustard, sesame, sulfites, lupin, molluscs):
+[ACTION:set_allergen:WERT:true] zum Hinzufügen
+[ACTION:set_allergen:WERT:false] zum Entfernen
+
+Beispiele:
+- Nutzer sagt "Ich bin vegan" -> Antworte bestätigend + [ACTION:set_preference:vegan:true]
+- Nutzer sagt "Ich vertrage kein Gluten" -> Antworte bestätigend + [ACTION:set_preference:glutenfree:true][ACTION:set_allergen:gluten:true]
+- Nutzer sagt "Entferne vegan" -> Antworte bestätigend + [ACTION:set_preference:vegan:false]
+
+WICHTIG: Die Action-Tags werden automatisch entfernt und vom Nutzer nicht gesehen. Schreibe trotzdem eine natürliche Bestätigung.
+
+Antworte freundlich, präzise und auf Deutsch. Nutze die echten Menüdaten oben.`;
+
+    const rawResponse = await getAiResponse(systemPrompt, question, history);
+
+    // Parse and execute any action tags, then return clean text
+    return executeActions(rawResponse);
 }
 
-/**
- * Get meal recommendations based on user preferences
- */
+// -------------------------------------------------------------------
+// Standalone helpers (kept for backwards compatibility)
+// -------------------------------------------------------------------
+
 export async function getMealRecommendation(
     userPreferences: string,
     availableMeals: string[]
 ): Promise<string> {
-    const systemPrompt = `Du bist ein hilfreicher Ernährungsberater für die HTW Berlin Mensa. 
+    const systemPrompt = `Du bist ein hilfreicher Ernährungsberater für Berliner Uni-Mensen.
 Gib personalisierte Empfehlungen basierend auf den Präferenzen des Nutzers.
 Antworte auf Deutsch, freundlich und präzise.`;
 
@@ -250,11 +335,8 @@ Was empfiehlst du mir?`;
     return getAiResponse(systemPrompt, userMessage);
 }
 
-/**
- * Get nutritional information about a meal
- */
 export async function getNutritionalInfo(mealName: string): Promise<string> {
-    const systemPrompt = `Du bist ein Ernährungsexperte. Gib detaillierte Informationen über Nährwerte, 
+    const systemPrompt = `Du bist ein Ernährungsexperte. Gib detaillierte Informationen über Nährwerte,
 Allergene und gesundheitliche Aspekte von Gerichten. Antworte auf Deutsch.`;
 
     const userMessage = `Gib mir Informationen über: ${mealName}`;
@@ -262,98 +344,6 @@ Allergene und gesundheitliche Aspekte von Gerichten. Antworte auf Deutsch.`;
     return getAiResponse(systemPrompt, userMessage);
 }
 
-/**
- * Answer general questions about the mensa with function calling support
- */
-export async function answerMensaQuestion(
-    question: string,
-    history: { role: 'user' | 'assistant', content: string }[] = []
-): Promise<string> {
-    const systemPrompt = `Du bist der KI-Assistent der HTW Berlin Mensa-App. 
-Beantworte Fragen über:
-- Öffnungszeiten (Mo-Fr 11:00-14:30, Sa-So geschlossen)
-- Menüs und Gerichte
-- Ernährungsberatung
-- Allergene und Nährwerte
-- Nachhaltigkeit der Gerichte
-
-Du kannst auch Einstellungen in der App ändern und Menüdaten abrufen.
-
-Verfügbare Funktionen:
-- Menü für ein bestimmtes Datum abrufen
-- Ernährungspräferenzen setzen (vegetarian, vegan, glutenfree, lactosefree, halal, kosher)
-- Allergene hinzufügen/entfernen (gluten, milk, eggs, fish, shellfish, nuts, peanuts, soy, celery, mustard, sesame, sulfites)
-- Prüfen, wann Favoriten verfügbar sind
-
-Antworte freundlich, präzise und auf Deutsch.`;
-
-    const functions = [
-        {
-            name: 'get_menu_for_date',
-            description: 'Ruft das Menü für ein bestimmtes Datum ab',
-            parameters: {
-                type: 'object',
-                properties: {
-                    date: {
-                        type: 'string',
-                        description: 'Das Datum im Format YYYY-MM-DD',
-                    },
-                },
-                required: ['date'],
-            },
-        },
-        {
-            name: 'set_dietary_preference',
-            description: 'Setzt oder entfernt eine Ernährungspräferenz',
-            parameters: {
-                type: 'object',
-                properties: {
-                    preference: {
-                        type: 'string',
-                        enum: ['vegetarian', 'vegan', 'glutenfree', 'lactosefree', 'halal', 'kosher'],
-                        description: 'Die Ernährungspräferenz',
-                    },
-                    enabled: {
-                        type: 'boolean',
-                        description: 'True zum Aktivieren, False zum Deaktivieren',
-                    },
-                },
-                required: ['preference', 'enabled'],
-            },
-        },
-        {
-            name: 'set_allergen',
-            description: 'Fügt ein Allergen hinzu oder entfernt es',
-            parameters: {
-                type: 'object',
-                properties: {
-                    allergen: {
-                        type: 'string',
-                        enum: ['gluten', 'milk', 'eggs', 'fish', 'shellfish', 'nuts', 'peanuts', 'soy', 'celery', 'mustard', 'sesame', 'sulfites'],
-                        description: 'Das Allergen',
-                    },
-                    enabled: {
-                        type: 'boolean',
-                        description: 'True zum Hinzufügen, False zum Entfernen',
-                    },
-                },
-                required: ['allergen', 'enabled'],
-            },
-        },
-        {
-            name: 'check_favorite_availability',
-            description: 'Prüft, wann die Favoriten-Gerichte in den nächsten 7 Tagen verfügbar sind',
-            parameters: {
-                type: 'object',
-                properties: {},
-            },
-        },
-    ];
-
-    return getAiResponse(systemPrompt, question, history, functions);
-}
-
-// Export default object for backwards compatibility
 export default {
     getAiResponse,
     getMealRecommendation,
