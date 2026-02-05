@@ -1,63 +1,82 @@
-# HTW Berlin Mensa App - Gruppe 04
+# UniMensa Berlin - Gruppe 04
 
-## 🎯 Features
+Mobile App für Studierende, Mitarbeiter und Gäste der HTW Berlin zum Abrufen von Mensa-Speiseplänen, KI-gestützten Ernährungsempfehlungen und Verwaltung von Ernährungspräferenzen.
+
+## Tech Stack
+
+- **Framework**: React Native 0.81.5 + Expo 54
+- **Sprache**: TypeScript 5.9 (strict mode)
+- **Navigation**: Expo Router (File-based Routing)
+- **State Management**: React Hooks + AsyncStorage
+- **KI**: OpenAI GPT-4o-mini (via Backend)
+
+## Features
 
 ### Kernfunktionen
-- **Menüplan-Ansicht**: Tagesaktuelle und wöchentliche Menüpläne
+- **Menüplan-Ansicht**: Tagesaktuelle Speisepläne aller Berliner Mensen
+- **Standort-Auswahl**: HTW (Wilhelminenhof/Treskowallee), TU, HU, FU, Charité und weitere
 - **Favoriten**: Speichern und Verwalten von Lieblingsgerichten
-- **Einstellungen**: Personalisierte Präferenzen und Allergen-Filter
 - **Preisanzeige**: Unterschiedliche Preise für Studenten, Mitarbeiter und Gäste
+- **Allergen-Filter**: Automatische Erkennung von 14 EU-Hauptallergenen
+- **Wartezeiten**: Aktuelle Auslastung der Mensen
 
-### KI-Integration
-- **Ernährungsberatung**: Personalisierte Empfehlungen basierend auf Präferenzen
-- **Intelligenter Chat**: Fragen zu Gerichten, Zutaten und Nährwerten
-- **Nährwertanalyse**: Detaillierte Analyse von Kalorien, Proteinen, etc.
-- **Allergen-Warnungen**: Automatische Erkennung von Allergenen
+### KI-Assistent
+- Personalisierte Menüempfehlungen basierend auf Präferenzen
+- Natürlichsprachliche Fragen zu Gerichten und Nährwerten
+- Allergen-Warnungen und Ernährungsberatung
 
-## 🏗️ Projektstruktur
+## Projektstruktur
 
 ```
-mensa-app-extended/
 ├── app/                          # Expo Router Screens
 │   └── (tabs)/                   # Tab-basierte Navigation
 │       ├── index.tsx             # Home Screen
 │       ├── menu.tsx              # Menüplan Screen
 │       ├── ai-assistant.tsx      # KI-Assistent Screen
 │       ├── favorites.tsx         # Favoriten Screen
-│       └── settings.tsx          # Einstellungen Screen
+│       ├── settings.tsx          # Einstellungen Screen
+│       └── waiting-times.tsx     # Wartezeiten Screen
 ├── components/                   # React Komponenten
 │   ├── mensa/                    # Mensa-spezifische Komponenten
-│   │   └── MenuCard.tsx          # Gericht-Karte
-│   └── ai/                       # KI-Komponenten
-│       └── ChatInterface.tsx     # Chat-Interface
+│   │   ├── MenuCard.tsx          # Gericht-Karte
+│   │   ├── RatingCard.tsx        # Bewertungs-Komponente
+│   │   └── SustainabilityBadge.tsx
+│   ├── ai/                       # KI-Komponenten
+│   │   └── ChatInterface.tsx     # Chat-Interface
+│   ├── dish-card.tsx             # Einzelne Gerichtkarte
+│   ├── daily-menu.tsx            # Tagesmenü-Ansicht
+│   ├── themed-view.tsx           # Dark/Light Mode Support
+│   └── themed-text.tsx
 ├── services/                     # Backend Services
-│   ├── api/                      # API Services
-│   │   └── mensaApi.ts           # Mensa API Client
-│   └── ai/                       # KI Services
-│       └── aiService.ts          # KI Integration
-├── models/                       # Datenmodelle
+│   ├── api/mensaApi.ts           # Mensa API Client
+│   ├── ai/aiService.ts           # KI Integration
+│   ├── storage/                  # AsyncStorage Wrapper
+│   ├── notifications/            # Push-Benachrichtigungen
+│   └── offline/                  # Offline-Unterstützung
+├── models/                       # TypeScript Datenmodelle
 │   ├── Menu.ts                   # Menü-Modell
-│   ├── Dish.ts                   # Gericht-Modell
+│   ├── Dish.ts                   # Gericht mit Allergenen, Labels
 │   └── UserPreferences.ts        # Nutzereinstellungen
 ├── hooks/                        # Custom React Hooks
 │   ├── useMenuData.ts            # Menüdaten Hook
-│   └── useAIChat.ts              # KI-Chat Hook
+│   ├── useAIChat.ts              # KI-Chat Hook
+│   └── use-color-scheme.ts       # Theme Hook
 ├── config/                       # Konfiguration
-│   ├── api.config.ts             # API-Konfiguration
-│   └── constants.ts              # App-Konstanten
-├── types/                        # TypeScript Typen
-│   └── index.d.ts                # Globale Type Definitions
-└── utils/                        # Hilfsfunktionen
+│   ├── api.config.ts             # API-Endpoints
+│   └── constants.ts              # Allergen-Labels, Storage Keys
+└── constants/                    # App-Konstanten
+    ├── locations.ts              # Campus-Standorte
+    └── theme.ts                  # HTW Green (#76B900)
 ```
 
-## 🚀 Installation
+## Installation
 
 ### Voraussetzungen
-- Node.js (v18 oder höher)
-- npm oder yarn
-- Expo CLI
-- Xcode (für iOS-Entwicklung)
-- Android Studio / IntelliJ IDEA (für Android-Entwicklung)
+- Node.js v18+
+- npm
+- Expo CLI (`npm install -g expo-cli`)
+- iOS: Xcode (für Simulator)
+- Android: Android Studio (für Emulator)
 
 ### Setup
 
@@ -67,11 +86,13 @@ mensa-app-extended/
    ```
 
 2. **Umgebungsvariablen konfigurieren**
-   
-   Erstellen Sie eine `.env` Datei im Projektverzeichnis:
+
+   Erstelle eine `.env` Datei im Projektverzeichnis:
    ```env
-   EXPO_PUBLIC_MENSA_API_URL=https://api.htw-mensa.de
-   EXPO_PUBLIC_OPENAI_API_KEY=your_openai_api_key_here
+   EXPO_PUBLIC_MENSA_API_KEY=dein_mensa_api_key
+   EXPO_PUBLIC_MENSA_API_URL=https://mensa.gregorflachs.de/api/v1
+   EXPO_PUBLIC_MENSA_CANTEEN_ID=              # Optional: Feste Mensa-ID
+   EXPO_PUBLIC_OPENAI_API_KEY=                # Optional: Für lokale KI-Tests
    ```
 
 3. **App starten**
@@ -79,93 +100,55 @@ mensa-app-extended/
    npm start
    ```
 
-4. **Plattform-spezifisch starten**
+4. **Plattform-spezifisch**
    ```bash
-   # iOS (Xcode erforderlich)
-   npm run ios
-   
-   # Android (Android Studio/IntelliJ erforderlich)
-   npm run android
-   
-   # Web
-   npm run web
+   npm run ios       # iOS Simulator
+   npm run android   # Android Emulator
+   npm run web       # Web Browser
    ```
 
-## 💻 Entwicklung
+## Entwicklung
 
-### Mit Xcode (iOS)
-1. Öffnen Sie das Projekt in Xcode
-2. Wählen Sie einen Simulator oder ein verbundenes Gerät
-3. Starten Sie die App mit `npm run ios`
+### Befehle
 
-### Mit IntelliJ IDEA (Android)
-1. Öffnen Sie das Projekt in IntelliJ IDEA
-2. Konfigurieren Sie den Android SDK
-3. Starten Sie einen Emulator oder verbinden Sie ein Gerät
-4. Starten Sie die App mit `npm run android`
-
-### Code-Qualität
 ```bash
-# TypeScript Type-Checking
-npm run type-check
-
-# Linting
-npm run lint
-
-# Tests ausführen
-npm run test
+npm start              # Expo Development Server
+npm run lint           # ESLint ausführen
+npm run type-check     # TypeScript prüfen
+npm run test           # Jest Tests
 ```
 
-## 🤖 KI-Integration
+### EAS Build (Production)
 
-Die App nutzt OpenAI's GPT-Modelle für:
-- Personalisierte Menüempfehlungen
-- Natürlichsprachliche Suche
-- Ernährungsberatung
-- Chatbot-Funktionalität
-
-### KI-Features konfigurieren
-Bearbeiten Sie `config/api.config.ts` um KI-Parameter anzupassen:
-```typescript
-AI_API: {
-  MODEL: 'gpt-4.1-mini',
-  MAX_TOKENS: 1000,
-  TEMPERATURE: 0.7,
-}
+```bash
+eas build --platform ios --profile development      # iOS Simulator
+eas build --platform android --profile preview      # Android APK
 ```
 
-## 📱 Plattform-Kompatibilität
+## APIs
 
-- **iOS**: Vollständig unterstützt (Xcode erforderlich)
-- **Android**: Vollständig unterstützt (Android Studio/IntelliJ erforderlich)
-- **Web**: Grundlegende Unterstützung
+### Mensa API
+- **Basis-URL**: `https://mensa.gregorflachs.de/api/v1`
+- **Endpoints**: `/canteen`, `/menue`, `/meal`, `/additive`, `/badge`
+- **Auth**: `X-API-KEY` Header
 
-## 🔧 Technologie-Stack
+### KI Backend
+- **URL**: `https://mensa-app-backend.vercel.app/api`
+- **Modell**: GPT-4o-mini
 
-- **Framework**: React Native mit Expo
-- **Sprache**: TypeScript
-- **Navigation**: Expo Router
-- **State Management**: React Hooks
-- **API Client**: Axios
-- **KI**: OpenAI API
-- **UI**: React Native Components
+## App-Konfiguration
 
-## 📝 TODO
+| Einstellung | Wert |
+|-------------|------|
+| App ID | `de.unimensa.berlin.gruppe04` |
+| EAS Project ID | `3e9f4af8-8657-4562-8f7a-e85a5cd12397` |
+| Slug | `htw-mensa-app` |
+| Owner | `gruppe-04` |
 
-- [ ] Mensa API Integration implementieren
-- [ ] KI-Empfehlungsalgorithmus verfeinern
-- [ ] Offline-Modus mit lokaler Datenspeicherung
-- [ ] Push-Benachrichtigungen für Tagesmenü
-- [ ] Bildererkennung für Gerichte
-- [ ] Bewertungssystem für Gerichte
-- [ ] Social Features (Teilen, Kommentare)
+## Team
 
-## 👥 Team
+Gruppe 04 - HTW Berlin, WiSe 25/26
 
-Gruppe 04 - HTW Berlin
+## Lizenz
 
-## 📄 Lizenz
-
-Dieses Projekt ist Teil eines Universitätsprojekts an der HTW Berlin.
-
-
+Universitätsprojekt der HTW Berlin.
