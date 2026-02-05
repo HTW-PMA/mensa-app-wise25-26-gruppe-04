@@ -8,6 +8,10 @@ Diese App kann auf [Expo.dev](https://expo.dev) deployed und auf echten Geräten
 
 ## 🚀 Schritt-für-Schritt Anleitung
 
+Bitte beachten Sie, dass zuerst lokal eine .env Datei mit folgendem Inhalt erstellt werden muss:
+
+EXPO_PUBLIC_MENSA_API_KEY=lylDptJVKMnASYr0Equ4Wk3lAtHdSmKBcuVHRL5h3Czlj6/BllEEo58Imkbj5M3f+wJwbnkLTMEEM/UHsRlPUSfCMfaf8Bi0zGYzuIAWbGnUtJNFs3f9j1LvJzJy6x+bNuvMqi5h632L2MdJ81NXnfnb1gI12bKtKxLqFTNAHmHLiEx72uh0uATs0xyrewHOujMv9JFIqfdjFIi3YCT0+6zMmkS6pedLvilyMJLy9f/BCMd2Ow7+3rEMbXjuLMJ6lXGofPbt3S1KILzZ7XrxVCxNpye9WSCj1KQdjceLyjX1CPqbXhiexhoTo3lcgQsCTy9S11G5NuAvgtrSMYx4hg==
+
 ### 1. Expo Account erstellen
 
 1. Gehe zu [expo.dev](https://expo.dev)

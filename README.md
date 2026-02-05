@@ -131,6 +131,9 @@ eas build --platform android --profile preview      # Android APK
 - **Basis-URL**: `https://mensa.gregorflachs.de/api/v1`
 - **Endpoints**: `/canteen`, `/menue`, `/meal`, `/additive`, `/badge`
 - **Auth**: `X-API-KEY` Header
+- **Folgendes muss lokal in einer .env Datei konfiguriert werden**:
+  
+EXPO_PUBLIC_MENSA_API_KEY=lylDptJVKMnASYr0Equ4Wk3lAtHdSmKBcuVHRL5h3Czlj6/BllEEo58Imkbj5M3f+wJwbnkLTMEEM/UHsRlPUSfCMfaf8Bi0zGYzuIAWbGnUtJNFs3f9j1LvJzJy6x+bNuvMqi5h632L2MdJ81NXnfnb1gI12bKtKxLqFTNAHmHLiEx72uh0uATs0xyrewHOujMv9JFIqfdjFIi3YCT0+6zMmkS6pedLvilyMJLy9f/BCMd2Ow7+3rEMbXjuLMJ6lXGofPbt3S1KILzZ7XrxVCxNpye9WSCj1KQdjceLyjX1CPqbXhiexhoTo3lcgQsCTy9S11G5NuAvgtrSMYx4hg==
 
 ### KI Backend
 - **URL**: `https://mensa-app-backend.vercel.app/api`
