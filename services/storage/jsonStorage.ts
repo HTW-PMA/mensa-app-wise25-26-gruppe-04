@@ -5,9 +5,13 @@ export async function setJson(key: string, value: unknown): Promise<void> {
 }
 
 export async function getJson<T>(key: string): Promise<T | null> {
-    const raw = await AsyncStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw) as T;
+    try {
+        const raw = await AsyncStorage.getItem(key);
+        if (!raw) return null;
+        return JSON.parse(raw) as T;
+    } catch {
+        return null;
+    }
 }
 
 export async function remove(key: string): Promise<void> {

@@ -26,7 +26,7 @@ const formatDate = (date: Date) => {
 
 export const DailyMenu: React.FC<DailyMenuProps> = ({ date, locationId, locationName }) => {
   // Menü laden (dein Hook liefert filteredMenu)
-  const { filteredMenu, loading, error, preferences } = useMenuData(date, locationId);
+  const { filteredMenu, loading, error, preferences, source } = useMenuData(date, locationId);
 
   // User Preferences laden (AsyncStorage)
   const { prefs, loadingPrefs } = useUserPreferences();
@@ -111,6 +111,16 @@ export const DailyMenu: React.FC<DailyMenuProps> = ({ date, locationId, location
       </ThemedText>
 
       {locationName ? <ThemedText style={styles.locationText}>{locationName}</ThemedText> : null}
+
+      {/* Offline-Hinweis */}
+      {source === 'cache' && (
+        <View style={[styles.offlineBanner, { backgroundColor: isDark ? '#2A2000' : '#FFF8E1' }]}>
+          <MaterialIcons name="cloud-off" size={16} color="#F59E0B" />
+          <ThemedText style={styles.offlineBannerText}>
+            Offline-Modus – gespeicherte Daten
+          </ThemedText>
+        </View>
+      )}
 
       {/* Dish count summary */}
       <View style={[styles.dishCountRow, { backgroundColor: isDark ? '#1C1C1E' : '#F2F3F5' }]}>
@@ -214,5 +224,20 @@ const styles = StyleSheet.create({
   dishCountText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  offlineBannerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#F59E0B',
   },
 });

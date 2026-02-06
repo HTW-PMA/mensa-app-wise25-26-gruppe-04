@@ -14,10 +14,13 @@ type Result<T> = {
     savedAt?: number;
 };
 
+// Verhindert doppeltes Prefetching für dieselbe Woche/Location
+const prefetchInProgress = new Set<string>();
+
 export class MensaOfflineService {
     /**
      * Holt das Tagesmenü mit Cache-Unterstützung.
-     * 
+     *
      * @param date Das Datum für das Menü
      * @param locationId Die Location-ID (z.B. 'htw') oder direkt eine Mensa-ID (z.B. '655ff175136d3b580c970f80')
      */
@@ -34,12 +37,19 @@ export class MensaOfflineService {
             // Speichere im Cache mit locationId als Key (kann Uni-ID oder Mensa-ID sein)
             await saveMenu(locationId, dateIso, menu);
 
+            // Ganze Woche im Hintergrund pre-cachen für Offline-Nutzung
+            MensaOfflineService.prefetchWeek(date, locationId).catch(() => {});
+
             return { data: menu, source: 'network' };
         } catch (e) {
             // Fallback: Cache
-            const cached = await loadMenu(locationId, dateIso);
-            if (cached?.data) {
-                return { data: cached.data, source: 'cache', savedAt: cached.savedAt };
+            try {
+                const cached = await loadMenu(locationId, dateIso);
+                if (cached?.data) {
+                    return { data: cached.data, source: 'cache', savedAt: cached.savedAt };
+                }
+            } catch {
+                // Cache-Lesevorgang fehlgeschlagen → weiter zum Fehler
             }
             throw e; // nichts im Cache → echter Fehler
         }
@@ -51,5 +61,35 @@ export class MensaOfflineService {
         const menu = await MensaApiService.getDailyMenu(date, locationId);
         await saveMenu(locationId, dateIso, menu);
         return { data: menu, source: 'network' };
+    }
+
+    /**
+     * Pre-cached die ganze Woche (Mo-Fr) im Hintergrund.
+     * Wird nach einem erfolgreichen Netzwerk-Abruf aufgerufen,
+     * damit alle Wochentage auch offline verfügbar sind.
+     */
+    static async prefetchWeek(referenceDate: Date, locationId: string): Promise<void> {
+        // Montag der Woche berechnen für einen eindeutigen Key
+        const day = referenceDate.getDay();
+        const monday = new Date(referenceDate);
+        monday.setDate(referenceDate.getDate() - ((day + 6) % 7));
+        const weekKey = `${locationId}-${toIsoDateLocal(monday)}`;
+
+        if (prefetchInProgress.has(weekKey)) return;
+        prefetchInProgress.add(weekKey);
+
+        try {
+            const menus = await MensaApiService.getWeeklyMenu(referenceDate, locationId);
+
+            for (const menu of menus) {
+                if (menu.date) {
+                    // menu.date kann "YYYY-MM-DD" oder "YYYY-MM-DDTHH:mm:ss" sein
+                    const dateIso = menu.date.includes('T') ? menu.date.split('T')[0] : menu.date;
+                    await saveMenu(locationId, dateIso, menu);
+                }
+            }
+        } finally {
+            prefetchInProgress.delete(weekKey);
+        }
     }
 }
