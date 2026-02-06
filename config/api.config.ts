@@ -3,9 +3,13 @@
  */
 import Constants from 'expo-constants';
 
+
 const getEnvVar = (key: string, defaultValue: string = ''): string => {
-  return Constants.expoConfig?.extra?.[key] || defaultValue;
+  const v = Constants.expoConfig?.extra?.[key];
+  console.log(`[ENV] ${key} =`, v);
+  return (v as string) || defaultValue;
 };
+
 
 export const API_CONFIG = {
     MENSA_API: {
